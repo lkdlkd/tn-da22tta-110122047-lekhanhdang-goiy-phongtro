@@ -1,5 +1,5 @@
-import { useRef } from 'react'
-import { Send, Paperclip, CalendarPlus, X, Film, ImageIcon } from 'lucide-react'
+import { useMemo, useRef } from 'react'
+import { CalendarPlus, Film, ImageIcon, Paperclip, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -16,27 +16,26 @@ export function ChatInput({
   disabled,
 }) {
   const fileInputRef = useRef(null)
-  const mediaPreviews = mediaFiles.map((f) => ({ url: URL.createObjectURL(f), type: f.type }))
+  const mediaPreviews = useMemo(() => mediaFiles.map((file) => ({ url: URL.createObjectURL(file), type: file.type })), [mediaFiles])
 
   return (
-    <div className="border-t bg-background shrink-0">
-      {/* Media preview strip */}
+    <div className="shrink-0 border-t bg-background">
       {mediaFiles.length > 0 && (
-        <div className="flex gap-2 px-3 pt-2.5 pb-2 overflow-x-auto">
-          {mediaPreviews.map((p, i) => (
-            <div key={i} className="relative shrink-0">
-              {p.type.startsWith('image') ? (
-                <img src={p.url} alt="" className="h-16 w-16 rounded-xl object-cover border" />
+        <div className="flex gap-2 overflow-x-auto px-3 pb-2 pt-3">
+          {mediaPreviews.map((preview, index) => (
+            <div key={`${preview.url}-${index}`} className="relative shrink-0">
+              {preview.type.startsWith('image') ? (
+                <img src={preview.url} alt="" className="h-16 w-16 rounded-lg border object-cover" />
               ) : (
-                <div className="h-16 w-16 flex flex-col items-center justify-center rounded-xl border bg-muted gap-1">
+                <div className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border bg-muted">
                   <Film className="h-5 w-5 text-muted-foreground" />
                   <span className="text-[9px] text-muted-foreground">Video</span>
                 </div>
               )}
               <button
                 type="button"
-                onClick={() => setMediaFiles((prev) => prev.filter((_, j) => j !== i))}
-                className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white shadow-sm"
+                onClick={() => setMediaFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white shadow-sm"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -45,77 +44,53 @@ export function ChatInput({
         </div>
       )}
 
-      {/* Input bar */}
-      <form onSubmit={onSubmit} className="flex items-center gap-1.5 px-3 py-2.5">
-        {/* Hidden file picker */}
+      <form onSubmit={onSubmit} className="flex items-end gap-2 px-3 py-3">
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*,video/mp4,video/quicktime,video/webm"
           multiple
           className="sr-only"
-          onChange={(e) => {
-            setMediaFiles((p) => [...p, ...Array.from(e.target.files || [])].slice(0, 5))
-            e.target.value = ''
+          onChange={(event) => {
+            setMediaFiles((prev) => [...prev, ...Array.from(event.target.files || [])].slice(0, 5))
+            event.target.value = ''
           }}
         />
 
-        {/* Attach */}
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
-          onClick={() => fileInputRef.current?.click()}
-          title="Đính kèm ảnh/video"
-          disabled={disabled}
-        >
-          <Paperclip className="h-4 w-4" />
-        </Button>
-
-        {/* Book tour */}
-        {hasRoom && (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-primary"
-            onClick={onOpenBooking}
-            title="Đặt lịch xem phòng"
-            disabled={disabled}
-          >
-            <CalendarPlus className="h-4 w-4" />
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="button" size="icon" variant="ghost" className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground" onClick={() => fileInputRef.current?.click()} title="Đính kèm ảnh/video" disabled={disabled}>
+            <Paperclip className="h-4 w-4" />
           </Button>
-        )}
+          {hasRoom && (
+            <Button type="button" size="icon" variant="ghost" className="h-9 w-9 rounded-lg text-muted-foreground hover:text-primary" onClick={onOpenBooking} title="Đặt lịch xem phòng" disabled={disabled}>
+              <CalendarPlus className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
 
-        {/* Text input */}
         <input
           value={input}
-          onChange={(e) => { setInput(e.target.value); onTyping() }}
+          onChange={(event) => {
+            setInput(event.target.value)
+            onTyping()
+          }}
           placeholder="Nhập tin nhắn..."
           disabled={disabled}
           autoComplete="off"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit(e) }
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
+              onSubmit(event)
+            }
           }}
           className={cn(
-            'flex-1 rounded-full border bg-muted/50 px-4 py-2 text-sm outline-none',
-            'focus:bg-background focus:ring-2 focus:ring-primary/30 transition',
-            'placeholder:text-muted-foreground/60'
+            'min-h-10 min-w-0 flex-1 rounded-lg border bg-muted/40 px-4 py-2 text-sm outline-none transition-colors',
+            'focus:bg-background focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground'
           )}
         />
 
-        {/* Send */}
-        <Button
-          type="submit"
-          size="icon"
-          className="shrink-0 h-9 w-9 rounded-full"
-          disabled={(!input.trim() && mediaFiles.length === 0) || uploading || disabled}
-        >
-          {uploading
-            ? <ImageIcon className="h-4 w-4 animate-pulse" />
-            : <Send className="h-4 w-4" />
-          }
+        <Button type="submit" size="icon" className="h-10 w-10 shrink-0 rounded-lg" disabled={(!input.trim() && mediaFiles.length === 0) || uploading || disabled}>
+          {uploading ? <ImageIcon className="h-4 w-4 animate-pulse" /> : <Send className="h-4 w-4" />}
         </Button>
       </form>
     </div>

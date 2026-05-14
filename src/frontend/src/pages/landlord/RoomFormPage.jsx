@@ -2,21 +2,42 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import {
-  ArrowLeft, Save, MapPinned, Image as ImageIcon, FileText,
-  Wifi, Wind, Flame, Package, WashingMachine, ChefHat,
-  Car, ShieldCheck, Camera, ArrowUp, Trees, Sofa, Bath, Zap,
-  CheckCircle2, Video,
+  ArrowLeft,
+  Bath,
+  Camera,
+  Car,
+  ChefHat,
+  CheckCircle2,
+  FileText,
+  Flame,
+  Home,
+  Image as ImageIcon,
+  MapPinned,
+  Package,
+  Save,
+  ShieldCheck,
+  Sofa,
+  Trees,
+  Upload,
+  Video,
+  WashingMachine,
+  Wifi,
+  Wind,
+  X,
+  Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createRoomApi, getRoomByIdApi, updateRoomApi } from '@/services/roomService'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { LandlordContent, LandlordPageHeader, StatusBadge } from './components/LandlordUI'
+import { cn } from '@/lib/utils'
 
 const roomTypeOptions = [
   { value: 'phòng_trọ', label: 'Phòng trọ' },
@@ -35,77 +56,12 @@ const amenityOptions = [
   { value: 'chỗ_để_xe', label: 'Chỗ để xe', icon: Car },
   { value: 'an_ninh', label: 'An ninh', icon: ShieldCheck },
   { value: 'camera', label: 'Camera', icon: Camera },
-  { value: 'thang_máy', label: 'Thang máy', icon: ArrowUp },
   { value: 'ban_công', label: 'Ban công', icon: Trees },
   { value: 'nội_thất', label: 'Nội thất', icon: Sofa },
   { value: 'vệ_sinh_riêng', label: 'Vệ sinh riêng', icon: Bath },
   { value: 'điện_nước_riêng', label: 'Điện nước riêng', icon: Zap },
 ]
 
-// ── Step Indicator ─────────────────────────────────────────────────────
-const STEPS = [
-  { label: 'Thông tin cơ bản', icon: FileText },
-  { label: 'Vị trí & địa chỉ', icon: MapPinned },
-  { label: 'Tiện ích & ảnh', icon: ImageIcon },
-]
-
-function StepIndicator() {
-  return (
-    <div className="flex items-center gap-0">
-      {STEPS.map((step, index) => {
-        const Icon = step.icon
-        const isLast = index === STEPS.length - 1
-        return (
-          <div key={step.label} className="flex items-center gap-0 flex-1">
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground">
-                <Icon className="h-4 w-4" />
-              </div>
-              <span className="text-xs font-medium text-center leading-tight hidden sm:block">{step.label}</span>
-            </div>
-            {!isLast && (
-              <div className="h-0.5 flex-1 bg-primary/30 mx-1 mb-4 hidden sm:block" />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/**
- * Chuẩn hóa địa chỉ Việt Nam từ Nominatim reverse geocode.
- *
- * Nominatim không cố định field — áp dụng priority chain cho từng cấp:
- *
- *  [street]   house_number + road  »  pedestrian/footway/path  »  name  »  hamlet  »  ''
- *  [ward]     neighbourhood  »  suburb  »  county* »  quarter  »  village*  »  ''
- *  [district] district  »  city  »  town  »  county*  »  municipality  »  state_district  »  ''
- *  [city]     state  »  ''   (strip tiền tố "Tỉnh "/"Thành phố ")
- *
- *  (*) county thường = Phường/Xã trong VN → ưu tiên ward; nếu không ward-like thì sang district.
- *  (*) village khi không có ward-like nào → có thể là thôn nhỏ → ward fallback.
- *
- * Thực tế quan sát được từ Vĩnh Long:
- *   { road, county:"Phường Hòa Thuận", state:"Tỉnh Vĩnh Long" }
- *   { road, city:"Trà Vinh", county:"Phường Trà Vinh", state:"Tỉnh Vĩnh Long" }
- */
-
-const reverseGeocodeLocation = async (lat, lng) => {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`
-  )
-  if (!response.ok) throw new Error('Không thể xác định địa chỉ từ vị trí đã chọn')
-  const data = await response.json()
-
-  // Lấy display_name từ Nominatim, bỏ ", Việt Nam" cuối chuỗi
-  const fullAddress = (data.display_name || '')
-    .replace(/,\s*Việt Nam$/i, '').trim()
-
-  return { fullAddress }
-}
-
-// ── Map sub-components ─────────────────────────────────────────────────
 function LocationPicker({ value, onPick }) {
   useMapEvents({
     click(event) {
@@ -113,7 +69,7 @@ function LocationPicker({ value, onPick }) {
     },
   })
   if (!value) return null
-  return <CircleMarker center={[value.lat, value.lng]} radius={11} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2 }} />
+  return <CircleMarker center={[value.lat, value.lng]} radius={10} pathOptions={{ color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.9, weight: 2 }} />
 }
 
 function MapViewport({ location }) {
@@ -125,27 +81,83 @@ function MapViewport({ location }) {
   return null
 }
 
-// ── Image preview list ─────────────────────────────────────────────────
-function PreviewList({ title, urls, onRemove }) {
+async function reverseGeocodeLocation(lat, lng) {
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`)
+  if (!response.ok) throw new Error('Không thể xác định địa chỉ từ vị trí đã chọn')
+  const data = await response.json()
+  const fullAddress = (data.display_name || '').replace(/,\s*Việt Nam$/i, '').trim()
+  return { fullAddress }
+}
+
+function FormSection({ number, title, description, icon: Icon, children }) {
+  return (
+    <Card>
+      <CardHeader className="p-5">
+        <div className="flex gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted text-sm font-bold">
+            {number}
+          </div>
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              {Icon && <Icon className="h-4 w-4 text-primary" />}
+              {title}
+            </CardTitle>
+            {description && <CardDescription className="mt-1 leading-6">{description}</CardDescription>}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 p-5 pt-0">{children}</CardContent>
+    </Card>
+  )
+}
+
+function MediaPicker({ id, label, description, icon: Icon, accept, multiple = true, onChange }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <label
+        htmlFor={id}
+        className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed bg-muted/30 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Chọn tệp</p>
+          <p className="text-xs leading-5 text-muted-foreground">{description}</p>
+        </div>
+        <Upload className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+        <input
+          id={id}
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          className="sr-only"
+          onChange={(event) => onChange(Array.from(event.target.files || []))}
+        />
+      </label>
+    </div>
+  )
+}
+
+function ImagePreviewList({ title, urls, onRemove }) {
   if (!urls.length) return null
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-muted-foreground">{title}</p>
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <p className="text-sm font-semibold">{title}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {urls.map((url, index) => (
           <div key={`${url}-${index}`} className="group relative overflow-hidden rounded-lg border bg-muted">
-            <img src={url} alt={`${title}-${index}`} className="h-28 w-full object-cover" />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/40">
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => onRemove(index)}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                Xoá
-              </Button>
-            </div>
+            <img src={url} alt="" className="h-32 w-full object-cover" />
+            <Button
+              type="button"
+              size="icon"
+              variant="destructive"
+              className="absolute right-2 top-2 h-8 w-8 rounded-lg opacity-0 transition-opacity group-hover:opacity-100"
+              onClick={() => onRemove(index)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         ))}
       </div>
@@ -153,7 +165,31 @@ function PreviewList({ title, urls, onRemove }) {
   )
 }
 
-// ── Main Form ──────────────────────────────────────────────────────────
+function VideoPreviewList({ title, urls, onRemove }) {
+  if (!urls.length) return null
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold">{title}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {urls.map((url, index) => (
+          <div key={`${url}-${index}`} className="group relative overflow-hidden rounded-lg border bg-muted">
+            <video src={url} controls className="h-44 w-full object-cover" />
+            <Button
+              type="button"
+              size="icon"
+              variant="destructive"
+              className="absolute right-2 top-2 h-8 w-8 rounded-lg opacity-0 transition-opacity group-hover:opacity-100"
+              onClick={() => onRemove(index)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function RoomFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -195,6 +231,7 @@ export default function RoomFormPage() {
 
   useEffect(() => {
     if (!isEditMode) return
+
     const fetchRoom = async () => {
       try {
         setLoading(true)
@@ -202,6 +239,7 @@ export default function RoomFormPage() {
         const room = res.data?.data?.room
         if (!room) return
         const [lng, lat] = room.location?.coordinates || []
+
         setForm({
           title: room.title || '',
           description: room.description || '',
@@ -211,7 +249,7 @@ export default function RoomFormPage() {
           roomType: room.roomType || 'phòng_trọ',
           address: typeof room.address === 'string'
             ? room.address
-            : (room.address?.fullAddress || [room.address?.street, room.address?.ward, room.address?.district, room.address?.city].filter(Boolean).join(', ') || ''),
+            : room.address?.fullAddress || [room.address?.street, room.address?.ward, room.address?.district, room.address?.city].filter(Boolean).join(', ') || '',
           isAvailable: room.isAvailable ?? true,
           amenities: room.amenities || [],
           location: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null,
@@ -225,6 +263,7 @@ export default function RoomFormPage() {
         setLoading(false)
       }
     }
+
     fetchRoom()
   }, [id, isEditMode])
 
@@ -233,12 +272,12 @@ export default function RoomFormPage() {
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const handleAmenityToggle = (amenity) => {
+  const toggleAmenity = (value) => {
     setForm((prev) => ({
       ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter((item) => item !== amenity)
-        : [...prev.amenities, amenity],
+      amenities: prev.amenities.includes(value)
+        ? prev.amenities.filter((item) => item !== value)
+        : [...prev.amenities, value],
     }))
   }
 
@@ -246,11 +285,7 @@ export default function RoomFormPage() {
     setForm((prev) => ({ ...prev, location }))
     try {
       const resolved = await reverseGeocodeLocation(location.lat, location.lng)
-      setForm((prev) => ({
-        ...prev,
-        location,
-        address: resolved.fullAddress,
-      }))
+      setForm((prev) => ({ ...prev, location, address: resolved.fullAddress }))
     } catch (error) {
       toast.error(error.message || 'Không thể tự động điền địa chỉ từ vị trí')
     }
@@ -261,6 +296,7 @@ export default function RoomFormPage() {
       toast.error('Trình duyệt không hỗ trợ lấy vị trí hiện tại')
       return
     }
+
     setLocationLoading(true)
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -270,10 +306,10 @@ export default function RoomFormPage() {
           setLocationLoading(false)
         }
       },
-      (err) => {
-        if (err.code === 1) toast.error('Quyền vị trí bị tắt. Cấp quyền trong cài đặt trình duyệt.')
-        else if (err.code === 2) toast.error('Không xác định được vị trí. Kiểm tra GPS thiết bị.')
-        else if (err.code === 3) toast.error('Hết thời gian lấy GPS. Vui lòng thử lại.')
+      (error) => {
+        if (error.code === 1) toast.error('Quyền vị trí đang bị tắt. Vui lòng cấp quyền trong trình duyệt.')
+        else if (error.code === 2) toast.error('Không xác định được vị trí. Kiểm tra GPS hoặc kết nối mạng.')
+        else if (error.code === 3) toast.error('Hết thời gian lấy vị trí. Vui lòng thử lại.')
         else toast.error('Không thể lấy vị trí hiện tại')
         setLocationLoading(false)
       },
@@ -287,6 +323,7 @@ export default function RoomFormPage() {
       toast.error('Vui lòng chọn vị trí trên bản đồ')
       return
     }
+
     try {
       setSaving(true)
       const payload = new FormData()
@@ -323,401 +360,246 @@ export default function RoomFormPage() {
     }
   }
 
-  // ── Loading skeleton ────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-72" />
+      <div className="min-h-screen bg-muted/20">
+        <LandlordPageHeader title={isEditMode ? 'Chỉnh sửa phòng' : 'Đăng phòng mới'} description="Đang tải dữ liệu phòng..." icon={Home} />
+        <LandlordContent className="grid gap-5 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-5">
+            {[0, 1, 2].map((item) => (
+              <Card key={item}>
+                <CardContent className="space-y-4 p-5">
+                  <Skeleton className="h-6 w-48" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Skeleton className="h-10" />
+                    <Skeleton className="h-10" />
+                  </div>
+                  <Skeleton className="h-28" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <Skeleton className="h-10 w-24" />
-        </div>
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Card><CardContent className="p-6 space-y-4">
-          <Skeleton className="h-5 w-32" />
-          <div className="grid gap-4 md:grid-cols-2">
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
-          </div>
-          <Skeleton className="h-24" />
-        </CardContent></Card>
-        <Card><CardContent className="p-6 space-y-3">
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-[320px] rounded-lg" />
-        </CardContent></Card>
+          <Skeleton className="h-72 rounded-lg" />
+        </LandlordContent>
       </div>
     )
   }
 
+  const completedItems = [
+    form.title,
+    form.price,
+    form.area,
+    form.address,
+    form.location,
+    form.description,
+  ].filter(Boolean).length
+
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="min-h-screen bg-muted/20">
+      <LandlordPageHeader
+        title={isEditMode ? 'Chỉnh sửa phòng' : 'Đăng phòng mới'}
+        description="Điền thông tin chính xác, thêm ảnh rõ ràng và ghim đúng vị trí để sinh viên dễ tìm thấy phòng."
+        icon={Home}
+        meta={<StatusBadge status={form.isAvailable ? 'available' : 'rented'} type="availability" />}
+        action={(
+          <Button variant="outline" className="h-9 rounded-lg" asChild>
+            <Link to="/landlord/rooms">
+              <ArrowLeft className="h-4 w-4" />
+              Quay lại
+            </Link>
+          </Button>
+        )}
+      />
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{isEditMode ? 'Chỉnh sửa phòng' : 'Đăng phòng mới'}</h1>
-          <p className="text-sm text-muted-foreground">
-            Điền đầy đủ thông tin để sinh viên dễ dàng tìm thấy phòng của bạn.
-          </p>
-        </div>
-        <Button variant="outline" asChild>
-          <Link to="/landlord/rooms">
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại
-          </Link>
-        </Button>
-      </div>
+      <LandlordContent className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <form id="room-form" onSubmit={handleSubmit} className="space-y-5">
+          <FormSection number="1" title="Thông tin cơ bản" description="Tên phòng, loại hình, giá thuê và mô tả ngắn gọn." icon={FileText}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="title">Tên phòng <span className="text-destructive">*</span></Label>
+                <Input id="title" name="title" value={form.title} onChange={handleChange} placeholder="VD: Phòng trọ sạch sẽ gần Đại học Cửu Long" required />
+              </div>
 
-      {/* Step Indicator */}
-      <Card>
-        <CardContent className="px-6 py-5">
-          <StepIndicator />
-        </CardContent>
-      </Card>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-
-        {/* ── SECTION 1: Thông tin cơ bản ── */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</div>
-              <CardTitle>Thông tin cơ bản</CardTitle>
-            </div>
-            <CardDescription>Tên phòng, loại phòng, giá, diện tích, sức chứa, mô tả.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="title">Tên phòng <span className="text-destructive">*</span></Label>
-              <Input id="title" name="title" value={form.title} onChange={handleChange} placeholder="VD: Phòng trọ sạch sẽ gần ĐH Cửu Long" required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="roomType">Loại phòng</Label>
-              <select
-                id="roomType"
-                name="roomType"
-                value={form.roomType}
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {roomTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input
-                  name="isAvailable"
-                  type="checkbox"
-                  checked={form.isAvailable}
+              <div className="space-y-2">
+                <Label htmlFor="roomType">Loại phòng</Label>
+                <select
+                  id="roomType"
+                  name="roomType"
+                  value={form.roomType}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-input accent-primary"
-                />
-                <span>Phòng còn trống</span>
-              </label>
-            </div>
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {roomTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="price">Giá thuê (VND/tháng) <span className="text-destructive">*</span></Label>
-              <Input id="price" name="price" type="number" min="0" value={form.price} onChange={handleChange} placeholder="VD: 2500000" required />
-            </div>
+              <div className="space-y-2">
+                <Label>Trạng thái phòng</Label>
+                <label className="flex h-10 cursor-pointer items-center justify-between rounded-md border bg-background px-3 text-sm">
+                  <span>{form.isAvailable ? 'Còn trống' : 'Đã cho thuê'}</span>
+                  <input name="isAvailable" type="checkbox" checked={form.isAvailable} onChange={handleChange} className="h-4 w-4 accent-primary" />
+                </label>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="area">Diện tích (m²) <span className="text-destructive">*</span></Label>
-              <Input id="area" name="area" type="number" min="1" value={form.area} onChange={handleChange} placeholder="VD: 25" required />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Giá thuê (VND/tháng) <span className="text-destructive">*</span></Label>
+                <Input id="price" name="price" type="number" min="0" value={form.price} onChange={handleChange} placeholder="VD: 2500000" required />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Sức chứa (người) <span className="text-destructive">*</span></Label>
-              <Input id="capacity" name="capacity" type="number" min="1" value={form.capacity} onChange={handleChange} required />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="area">Diện tích (m²) <span className="text-destructive">*</span></Label>
+                <Input id="area" name="area" type="number" min="1" value={form.area} onChange={handleChange} placeholder="VD: 25" required />
+              </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="description">Mô tả chi tiết <span className="text-destructive">*</span></Label>
-              <Textarea
-                id="description"
-                name="description"
-                rows={4}
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Mô tả về phòng, khu vực, tiện ích xung quanh..."
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label htmlFor="capacity">Sức chứa <span className="text-destructive">*</span></Label>
+                <Input id="capacity" name="capacity" type="number" min="1" value={form.capacity} onChange={handleChange} required />
+              </div>
 
-        {/* ── SECTION 2: Địa chỉ & Vị trí ── */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</div>
-              <CardTitle>Địa chỉ và vị trí</CardTitle>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="description">Mô tả chi tiết <span className="text-destructive">*</span></Label>
+                <Textarea id="description" name="description" rows={5} value={form.description} onChange={handleChange} placeholder="Mô tả về phòng, khu vực, tiện ích xung quanh..." required />
+              </div>
             </div>
-            <CardDescription>
-              Click vào bản đồ để ghim toạ độ phòng, hoặc dùng vị trí hiện tại để tự điền địa chỉ.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={handleUseCurrentLocation} disabled={locationLoading}>
+          </FormSection>
+
+          <FormSection number="2" title="Địa chỉ và bản đồ" description="Ghim vị trí trên bản đồ để kết quả tìm kiếm chính xác hơn." icon={MapPinned}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" className="rounded-lg" onClick={handleUseCurrentLocation} disabled={locationLoading}>
                 <MapPinned className="h-4 w-4" />
                 {locationLoading ? 'Đang lấy vị trí...' : 'Lấy vị trí hiện tại'}
               </Button>
               {form.location && (
-                <div className="flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 text-xs font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Đã chọn: {form.location.lat.toFixed(5)}, {form.location.lng.toFixed(5)}
-                </div>
+                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                  {form.location.lat.toFixed(5)}, {form.location.lng.toFixed(5)}
+                </Badge>
               )}
             </div>
 
-            {/* Địa chỉ — 1 ô duy nhất */}
             <div className="space-y-2">
-              <Label htmlFor="address">
-                Địa chỉ đầy đủ <span className="text-destructive">*</span>
-                <span className="ml-1.5 text-xs text-muted-foreground">(tự động điền khi chọn bản đồ, hoặc nhập thủ công)</span>
-              </Label>
-              <Input
-                id="address"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                placeholder="VD: 123 Đường Nguyễn Huệ, Phường 1, Vĩnh Long..."
-                required
-              />
+              <Label htmlFor="address">Địa chỉ đầy đủ <span className="text-destructive">*</span></Label>
+              <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="VD: 123 Nguyễn Huệ, Phường 1, Vĩnh Long" required />
             </div>
 
-            {/* Bản đồ */}
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                👆 Click vào bản đồ để ghim vị trí phòng. Địa chỉ sẽ tự động được điền.
-              </p>
+            <div className="overflow-hidden rounded-lg border">
               <MapContainer
                 center={form.location ? [form.location.lat, form.location.lng] : [10.2547, 105.9722]}
                 zoom={13}
-                className="h-[360px] w-full rounded-lg border"
+                className="h-[360px] w-full"
               >
-                <TileLayer
-                  attribution='&copy; OpenStreetMap contributors'
-                  url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                />
+                <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapViewport location={form.location} />
                 <LocationPicker value={form.location} onPick={applyLocationSelection} />
               </MapContainer>
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-xs leading-5 text-muted-foreground">Click trực tiếp lên bản đồ để ghim vị trí phòng. Địa chỉ sẽ được tự động gợi ý nếu dịch vụ bản đồ phản hồi.</p>
+          </FormSection>
 
-        {/* ── SECTION 3: Tiện ích ── */}
-        <Card>
-          <CardHeader>
+          <FormSection number="3" title="Tiện ích" description="Chọn những tiện ích thật sự có trong phòng." icon={Wifi}>
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</div>
-              <CardTitle>Tiện ích</CardTitle>
-            </div>
-            <CardDescription>Chọn các tiện ích có sẵn trong phòng để tăng chất lượng tin đăng.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-3 flex items-center gap-2">
-              <Badge variant="secondary">Đã chọn {form.amenities.length} tiện ích</Badge>
+              <Badge variant="secondary">Đã chọn {form.amenities.length}</Badge>
               {form.amenities.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, amenities: [] }))}
-                  className="text-xs text-muted-foreground underline hover:text-foreground"
-                >
+                <Button type="button" variant="ghost" size="sm" className="h-8 rounded-lg text-xs" onClick={() => setForm((prev) => ({ ...prev, amenities: [] }))}>
                   Bỏ chọn tất cả
-                </button>
+                </Button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {amenityOptions.map((amenity) => {
                 const Icon = amenity.icon
                 const selected = form.amenities.includes(amenity.value)
                 return (
-                  <Button
+                  <button
                     key={amenity.value}
                     type="button"
-                    size="sm"
-                    variant={selected ? 'default' : 'outline'}
-                    onClick={() => handleAmenityToggle(amenity.value)}
-                    className="gap-1.5"
+                    onClick={() => toggleAmenity(amenity.value)}
+                    className={cn(
+                      'flex h-10 items-center gap-2 rounded-lg border px-3 text-left text-sm transition-colors',
+                      selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:border-primary/40'
+                    )}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    {amenity.label}
-                  </Button>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{amenity.label}</span>
+                  </button>
                 )
               })}
             </div>
-          </CardContent>
-        </Card>
+          </FormSection>
 
-        {/* ── SECTION 4: Ảnh ── */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">4</div>
-              <CardTitle>Ảnh phòng</CardTitle>
+          <FormSection number="4" title="Ảnh và video" description="Ảnh sáng, rõ và đúng thực tế giúp tin đăng đáng tin hơn." icon={ImageIcon}>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <MediaPicker id="images" label="Ảnh thường" description="PNG, JPG, WEBP. Có thể chọn nhiều ảnh." icon={ImageIcon} accept="image/*" onChange={setImageFiles} />
+              <MediaPicker id="images360" label="Ảnh 360" description="Ảnh panorama toàn cảnh phòng." icon={Camera} accept="image/*" onChange={setImage360Files} />
+              <MediaPicker id="videos" label="Video" description="MP4, MOV, WEBM. Tối đa 3 video." icon={Video} accept="video/mp4,video/quicktime,video/webm,video/x-msvideo" onChange={setVideoFiles} />
             </div>
-            <CardDescription>Upload ảnh thường và ảnh 360° Panorama (tuỳ chọn).</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Upload ảnh thường */}
-            <div className="space-y-2">
-              <Label htmlFor="images">Ảnh thường</Label>
-              <label
-                htmlFor="images"
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Nhấn để chọn ảnh</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — nhiều file</p>
+
+            <Separator />
+
+            <ImagePreviewList title="Ảnh đã lưu" urls={existingImages} onRemove={(index) => setExistingImages((prev) => prev.filter((_, i) => i !== index))} />
+            <ImagePreviewList title="Ảnh 360 đã lưu" urls={existingImages360} onRemove={(index) => setExistingImages360((prev) => prev.filter((_, i) => i !== index))} />
+            <VideoPreviewList title="Video đã lưu" urls={existingVideos} onRemove={(index) => setExistingVideos((prev) => prev.filter((_, i) => i !== index))} />
+            <ImagePreviewList title="Ảnh mới" urls={imagePreviewUrls} onRemove={(index) => setImageFiles((prev) => prev.filter((_, i) => i !== index))} />
+            <ImagePreviewList title="Ảnh 360 mới" urls={image360PreviewUrls} onRemove={(index) => setImage360Files((prev) => prev.filter((_, i) => i !== index))} />
+            <VideoPreviewList title="Video mới" urls={videoPreviewUrls} onRemove={(index) => setVideoFiles((prev) => prev.filter((_, i) => i !== index))} />
+          </FormSection>
+        </form>
+
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <Card>
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Tóm tắt tin đăng</CardTitle>
+              <CardDescription>Kiểm tra nhanh trước khi lưu.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-5 pt-0">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="line-clamp-2 font-semibold">{form.title || 'Chưa nhập tên phòng'}</p>
+                <p className="mt-1 text-sm text-primary">{form.price ? `${Number(form.price).toLocaleString('vi-VN')} đ/tháng` : 'Chưa nhập giá'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{form.area || 0} m² · {form.capacity || 1} người</p>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Tiến độ thông tin</span>
+                  <span className="font-semibold">{completedItems}/6</span>
                 </div>
-                <input
-                  id="images"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => setImageFiles(Array.from(event.target.files || []))}
-                />
-              </label>
-            </div>
-
-            {/* Upload ảnh 360 */}
-            <div className="space-y-2">
-              <Label htmlFor="images360">
-                Ảnh 360° Panorama
-                <span className="ml-2 text-xs font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
-              <label
-                htmlFor="images360"
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                <div className="text-2xl">🌐</div>
-                <div>
-                  <p className="text-sm font-medium">Nhấn để chọn ảnh 360°</p>
-                  <p className="text-xs text-muted-foreground">Ảnh panorama toàn cảnh phòng</p>
-                </div>
-                <input
-                  id="images360"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => setImage360Files(Array.from(event.target.files || []))}
-                />
-              </label>
-            </div>
-
-            {/* Upload Video phòng trọ */}
-            <div className="space-y-2">
-              <Label htmlFor="videos">
-                Video phòng trọ
-                <span className="ml-2 text-xs font-normal text-muted-foreground">(tuỳ chọn, tối đa 3 video MP4)</span>
-              </Label>
-              <label
-                htmlFor="videos"
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                <Video className="h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Nhấn để chọn video</p>
-                  <p className="text-xs text-muted-foreground">MP4, MOV, WEBM — tối đa 50MB mỗi file</p>
-                </div>
-                <input
-                  id="videos"
-                  type="file"
-                  accept="video/mp4,video/quicktime,video/webm,video/x-msvideo"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => setVideoFiles(Array.from(event.target.files || []))}
-                />
-              </label>
-            </div>
-
-            {/* Preview videos đã lưu (edit mode) */}
-            {existingVideos.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Video đã lưu</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {existingVideos.map((url, index) => (
-                    <div key={`${url}-${index}`} className="group relative overflow-hidden rounded-lg border bg-muted">
-                      <video src={url} controls className="h-40 w-full object-cover" />
-                      <Button
-                        type="button" variant="destructive" size="sm"
-                        onClick={() => setExistingVideos((prev) => prev.filter((_, i) => i !== index))}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >Xoá</Button>
-                    </div>
-                  ))}
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${(completedItems / 6) * 100}%` }} />
                 </div>
               </div>
-            )}
 
-            {/* Preview video mới chọn */}
-            {videoPreviewUrls.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Video mới ({videoPreviewUrls.length})</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {videoPreviewUrls.map((url, index) => (
-                    <div key={`${url}-${index}`} className="group relative overflow-hidden rounded-lg border bg-muted">
-                      <video src={url} controls className="h-40 w-full object-cover" />
-                      <Button
-                        type="button" variant="destructive" size="sm"
-                        onClick={() => setVideoFiles((prev) => prev.filter((_, i) => i !== index))}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >Xoá</Button>
-                    </div>
-                  ))}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Ảnh thường</span>
+                  <span className="font-semibold">{existingImages.length + imageFiles.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Ảnh 360</span>
+                  <span className="font-semibold">{existingImages360.length + image360Files.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Video</span>
+                  <span className="font-semibold">{existingVideos.length + videoFiles.length}</span>
                 </div>
               </div>
-            )}
 
-            {/* Preview image */}
-            <PreviewList
-              title="Ảnh thường đã lưu"
-              urls={existingImages}
-              onRemove={(index) => setExistingImages((prev) => prev.filter((_, i) => i !== index))}
-            />
-            <PreviewList
-              title="Ảnh 360° đã lưu"
-              urls={existingImages360}
-              onRemove={(index) => setExistingImages360((prev) => prev.filter((_, i) => i !== index))}
-            />
-            <PreviewList
-              title="Ảnh thường mới"
-              urls={imagePreviewUrls}
-              onRemove={(index) => setImageFiles((prev) => prev.filter((_, i) => i !== index))}
-            />
-            <PreviewList
-              title="Ảnh 360° mới"
-              urls={image360PreviewUrls}
-              onRemove={(index) => setImage360Files((prev) => prev.filter((_, i) => i !== index))}
-            />
-          </CardContent>
-        </Card>
+              <Separator />
 
-        <Separator />
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" asChild>
-            <Link to="/landlord/rooms">Huỷ</Link>
-          </Button>
-          <Button type="submit" disabled={saving}>
-            <Save className="h-4 w-4" />
-            {saving ? 'Đang lưu...' : isEditMode ? 'Lưu thay đổi' : 'Đăng phòng'}
-          </Button>
-        </div>
-      </form>
+              <div className="grid gap-2">
+                <Button type="submit" form="room-form" disabled={saving} className="rounded-lg">
+                  <Save className="h-4 w-4" />
+                  {saving ? 'Đang lưu...' : isEditMode ? 'Lưu thay đổi' : 'Đăng phòng'}
+                </Button>
+                <Button type="button" variant="outline" className="rounded-lg" asChild>
+                  <Link to="/landlord/rooms">Huỷ</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+      </LandlordContent>
     </div>
   )
 }

@@ -9,109 +9,111 @@ import { loginApi, getMeApi } from '@/services/authService'
 import { loginStart, loginSuccess, loginFailure } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Eye, EyeOff, Home, Loader2, GraduationCap, Building2, X } from 'lucide-react'
+import { CardContent, CardFooter } from '@/components/ui/card'
+import { Building2, GraduationCap, Loader2, Mail, MapPinned, Search, Sparkles, X } from 'lucide-react'
+import {
+  AuthCard,
+  AuthShell,
+  FormField,
+  PasswordField,
+  SubmitButton,
+} from '@/pages/auth/components/AuthLayout'
 import { cn } from '@/lib/utils'
 
 const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
-  }
-  const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}`;
-};
-const BACKEND_URL = `${getApiBaseUrl()}/api`;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  const { protocol, hostname } = window.location
+  return `${protocol}//${hostname}`
+}
+
+const BACKEND_URL = `${getApiBaseUrl()}/api`
 
 const schema = yup.object({
   email: yup.string().email('Email không hợp lệ').required('Vui lòng nhập email'),
   password: yup.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').required('Vui lòng nhập mật khẩu'),
 })
 
-/* ── Role picker modal ───────────────────────────────────────────────────── */
+const GOOGLE_PATHS = [
+  ['#4285F4', 'M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'],
+  ['#34A853', 'M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'],
+  ['#FBBC05', 'M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z'],
+  ['#EA4335', 'M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'],
+]
+
+function GoogleIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      {GOOGLE_PATHS.map(([fill, d]) => <path key={fill} fill={fill} d={d} />)}
+    </svg>
+  )
+}
+
 function RolePickerModal({ onSelect, onClose }) {
-  const ROLES = [
+  const roles = [
     {
       key: 'student',
       icon: GraduationCap,
-      title: 'Sinh viên / Người thuê',
-      desc: 'Tìm kiếm và thuê phòng trọ phù hợp',
-      color: 'border-blue-400 bg-blue-50/60 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
-      hover: 'hover:border-blue-500 hover:shadow-blue-100 dark:hover:shadow-blue-900/30',
+      title: 'Sinh viên',
+      desc: 'Lưu phòng yêu thích, nhận gợi ý và đặt lịch xem phòng.',
+      className: 'border-blue-200 bg-blue-50/70 text-blue-700 hover:border-blue-400 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300',
     },
     {
       key: 'landlord',
       icon: Building2,
       title: 'Chủ trọ',
-      desc: 'Đăng tin và quản lý phòng cho thuê',
-      color: 'border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300',
-      hover: 'hover:border-emerald-500 hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30',
+      desc: 'Đăng tin, quản lý phòng và trao đổi với người thuê.',
+      className: 'border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:border-emerald-400 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300',
     },
   ]
 
   return (
-    /* backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-background border shadow-xl p-6 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md rounded-xl border bg-background p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* close */}
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground hover:bg-muted transition-colors"
+          className="absolute right-3 top-3 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label="Đóng"
         >
           <X className="h-4 w-4" />
         </button>
 
-        {/* header */}
-        <div className="mb-5 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mx-auto mb-3">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
+        <div className="mb-5 flex items-start gap-3 pr-8">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card">
+            <GoogleIcon className="h-5 w-5" />
           </div>
-          <h2 className="text-lg font-bold">Tiếp tục với Google</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Bạn đăng ký với tư cách nào?
-          </p>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight">Tiếp tục với Google</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Chọn vai trò để hệ thống mở đúng trải nghiệm cho bạn.
+            </p>
+          </div>
         </div>
 
-        {/* role cards */}
-        <div className="grid grid-cols-2 gap-3">
-          {ROLES.map(({ key, icon: Icon, title, desc, color, hover }) => (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {roles.map(({ key, icon: Icon, title, desc, className }) => (
             <button
               key={key}
               id={`google-role-${key}`}
               onClick={() => onSelect(key)}
-              className={cn(
-                'flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all duration-150 hover:shadow-md',
-                color, hover
-              )}
+              className={cn('flex min-h-36 flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all hover:shadow-sm', className)}
             >
-              <Icon className="h-8 w-8 shrink-0" />
+              <Icon className="h-6 w-6" />
               <span className="text-sm font-semibold leading-tight">{title}</span>
-              <span className="text-[11px] text-muted-foreground leading-tight">{desc}</span>
+              <span className="text-xs leading-relaxed text-muted-foreground">{desc}</span>
             </button>
           ))}
         </div>
-
-        <p className="mt-4 text-center text-[11px] text-muted-foreground">
-          Nếu đã có tài khoản, vai trò sẽ được giữ nguyên.
-        </p>
       </div>
     </div>
   )
 }
 
-/* ── Main Page ───────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -126,7 +128,6 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: yupResolver(schema) })
 
-  /* Handle token returned from Google OAuth callback */
   useEffect(() => {
     const token = searchParams.get('token')
     const error = searchParams.get('error')
@@ -146,7 +147,7 @@ export default function LoginPage() {
         const user = res.data?.data?.user
         if (!user) throw new Error()
         dispatch(loginSuccess({ token, user }))
-        toast.success(`Chào mừng ${user.name}! 🎉`)
+        toast.success(`Chào mừng ${user.name}!`)
         navigate('/', { replace: true })
       } catch {
         localStorage.removeItem('token')
@@ -155,6 +156,7 @@ export default function LoginPage() {
         setGoogleLoading(false)
       }
     }
+
     handleGoogleToken()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -163,7 +165,7 @@ export default function LoginPage() {
     try {
       const res = await loginApi(data)
       dispatch(loginSuccess(res.data.data))
-      toast.success('Đăng nhập thành công! Chào mừng bạn trở lại 👋')
+      toast.success('Đăng nhập thành công! Chào mừng bạn trở lại')
       navigate('/')
     } catch (err) {
       const message = err.response?.data?.message || 'Đăng nhập thất bại'
@@ -172,7 +174,6 @@ export default function LoginPage() {
     }
   }
 
-  /* Role selected → redirect to backend OAuth with role in query */
   const handleRoleSelect = (role) => {
     setShowRolePicker(false)
     window.location.href = `${BACKEND_URL}/auth/google?role=${role}`
@@ -180,7 +181,7 @@ export default function LoginPage() {
 
   if (googleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm">Đang đăng nhập với Google...</p>
@@ -191,121 +192,91 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* Role picker modal */}
-      {showRolePicker && (
-        <RolePickerModal
-          onSelect={handleRoleSelect}
-          onClose={() => setShowRolePicker(false)}
-        />
-      )}
+      {showRolePicker && <RolePickerModal onSelect={handleRoleSelect} onClose={() => setShowRolePicker(false)} />}
 
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md">
-          <div className="flex justify-center mb-8">
-            <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-              <Home className="h-8 w-8" />
-              <span>PhòngTrọ VL</span>
-            </Link>
-          </div>
+      <AuthShell
+        title="Chào mừng bạn trở lại"
+        description="Đăng nhập để lưu phòng, đặt lịch xem và nhận gợi ý phù hợp hơn."
+        asideTitle="Đăng nhập để tiếp tục hành trình tìm phòng phù hợp."
+        asideDescription="Một tài khoản giúp bạn quản lý phòng yêu thích, lịch hẹn, tin nhắn và các đề xuất cá nhân hóa."
+        asideItems={[
+          { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
+          { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
+          { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
+        ]}
+        footerPrompt="Chưa có tài khoản?"
+        footerLinkText="Đăng ký"
+        footerLinkTo="/register"
+      >
+        <AuthCard
+          icon={Mail}
+          title="Đăng nhập"
+          description="Nhập thông tin tài khoản Phòng Trọ TVU của bạn."
+        >
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <CardContent className="space-y-5">
+              <Button
+                id="btn-google-login"
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-lg"
+                onClick={() => setShowRolePicker(true)}
+              >
+                <GoogleIcon className="h-4 w-4" />
+                Đăng nhập với Google
+              </Button>
 
-          <Card className="shadow-sm">
-            <CardHeader className="space-y-1 text-center">
-              <CardTitle className="text-2xl">Đăng nhập</CardTitle>
-              <CardDescription>Nhập email và mật khẩu của bạn</CardDescription>
-            </CardHeader>
-
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <CardContent className="space-y-4">
-                {/* Google login button — opens role picker first */}
-                <Button
-                  id="btn-google-login"
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setShowRolePicker(true)}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  Đăng nhập với Google
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Hoặc</span>
-                  </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="example@email.com"
-                    {...register('email')}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email.message}</p>
-                  )}
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Hoặc dùng email</span>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="login-password">Mật khẩu</Label>
-                    <Link
-                      to="/forgot-password"
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Quên mật khẩu?
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="login-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      {...register('password')}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password.message}</p>
-                  )}
-                </div>
-              </CardContent>
+              <FormField id="login-email" label="Email" error={errors.email?.message}>
+                <Input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="example@email.com"
+                  className="h-11 rounded-lg"
+                  {...register('email')}
+                />
+              </FormField>
 
-              <CardFooter className="flex flex-col space-y-4">
-                <Button
-                  id="btn-login-submit"
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
-                </Button>
-                <p className="text-sm text-center text-muted-foreground">
-                  Chưa có tài khoản?{' '}
-                  <Link to="/register" className="text-primary font-medium hover:underline">
-                    Đăng ký ngay
-                  </Link>
-                </p>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
-      </div>
+              <PasswordField
+                id="login-password"
+                label="Mật khẩu"
+                autoComplete="current-password"
+                register={register('password')}
+                error={errors.password?.message}
+                show={showPassword}
+                onToggle={() => setShowPassword((value) => !value)}
+              />
+
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                  Quên mật khẩu?
+                </Link>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col gap-4">
+              <SubmitButton id="btn-login-submit" loading={isSubmitting} loadingText="Đang đăng nhập...">
+                Đăng nhập
+              </SubmitButton>
+              <p className="text-center text-sm text-muted-foreground">
+                Bạn là chủ trọ?{' '}
+                <Link to="/register" className="font-semibold text-primary hover:underline">
+                  Tạo tài khoản để đăng phòng
+                </Link>
+              </p>
+            </CardFooter>
+          </form>
+        </AuthCard>
+      </AuthShell>
     </>
   )
 }

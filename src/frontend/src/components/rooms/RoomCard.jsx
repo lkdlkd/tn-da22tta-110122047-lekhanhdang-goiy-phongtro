@@ -1,94 +1,170 @@
 import { Link } from 'react-router-dom'
-import { Eye, MapPin, Maximize2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Eye, Home, MapPin, Maximize2, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { FavoriteButton } from '@/components/rooms/FavoriteButton'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { CompareButton } from '@/components/compare/CompareBar'
+import { FavoriteButton } from '@/components/rooms/FavoriteButton'
+import { cn } from '@/lib/utils'
 
-function formatCurrency(value) {
+export function formatRoomPrice(value) {
+  if (!value) return 'Đang cập nhật'
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0,
-  }).format(value || 0)
+  }).format(value)
 }
 
-function formatAddress(address) {
+export function formatRoomAddress(address) {
   if (!address) return ''
   if (typeof address === 'string') return address
-  // legacy object fallback
   return address.fullAddress || [address.street, address.ward, address.district, address.city].filter(Boolean).join(', ')
 }
 
-export function RoomCard({ room, distanceText }) {
-  if (!room) return null
+function StatusBadge({ value }) {
+  if (value === undefined || value === null) return null
 
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-      {/* Ảnh */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-        {room.images?.[0] ? (
-          <img
-            src={room.images[0]}
-            alt={room.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Chưa có ảnh
-          </div>
-        )}
+    <Badge
+      variant="outline"
+      className={cn(
+        'border text-[10px] font-semibold shadow-sm',
+        value
+          ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/70 dark:text-sky-300'
+          : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300'
+      )}
+    >
+      {value ? 'Còn trống' : 'Đã cho thuê'}
+    </Badge>
+  )
+}
 
-        {/* Badge trạng thái góc trên trái — chỉ hiện khi field isAvailable có giá trị rõ ràng */}
-        {room.isAvailable !== undefined && (
-          <div className="absolute left-2 top-2">
-            <Badge
-              variant={room.isAvailable ? 'success' : 'muted'}
-              className="shadow-sm"
-            >
-              {room.isAvailable ? 'Còn trống' : 'Hết phòng'}
-            </Badge>
-          </div>
-        )}
+export function RoomCardSkeleton({ view = 'grid' }) {
+  const list = view === 'list'
 
-        {/* Nút yêu thích + so sánh góc trên phải */}
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <CompareButton room={room} />
-          <FavoriteButton roomId={room._id} size="icon" />
+  return (
+    <Card className="overflow-hidden rounded-lg">
+      <CardContent className={cn('p-0', list && 'grid sm:grid-cols-[220px_1fr]')}>
+        <Skeleton className={cn('rounded-none', list ? 'aspect-[16/10] sm:aspect-auto' : 'aspect-[4/3]')} />
+        <div className="space-y-3 p-4">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-8 w-full" />
         </div>
-      </div>
+      </CardContent>
+    </Card>
+  )
+}
 
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="line-clamp-2 text-base leading-snug">{room.title}</CardTitle>
-        <CardDescription className="line-clamp-1 text-xs">{formatAddress(room.address)}</CardDescription>
-      </CardHeader>
+export function RoomCard({
+  room,
+  view = 'grid',
+  highlighted = false,
+  distanceText,
+  showActions = true,
+  showFavorite = true,
+  showCompare = true,
+  showViewButton = true,
+  actionSlot,
+  amenitiesMap,
+  className,
+}) {
+  if (!room) return null
 
-      <CardContent className="space-y-3 pt-0">
-        {/* Giá + Diện tích */}
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-lg font-bold text-primary">{formatCurrency(room.price)}</p>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Maximize2 className="h-3 w-3" />
-            <span>{room.area} m²</span>
-          </div>
-        </div>
+  const list = view === 'list'
+  const address = formatRoomAddress(room.address)
+  const image = room.images?.[0]
+  const amenityLimit = list ? 6 : 4
 
-        {/* Khoảng cách */}
-        {distanceText ? (
-          <div className="flex items-center gap-1.5 rounded-md bg-primary/5 px-2.5 py-1.5 text-xs font-medium text-primary">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span>Cách bạn {distanceText}</span>
-          </div>
-        ) : null}
-
-        {/* Nút xem */}
-        <Button asChild className="w-full" size="sm">
-          <Link to={`/rooms/${room.slug}`}>
-            <Eye className="h-4 w-4" />
-            Xem chi tiết
+  return (
+    <Card
+      className={cn(
+        'group h-full overflow-hidden rounded-lg transition-colors hover:border-primary/40 hover:shadow-sm',
+        highlighted && 'ring-2 ring-primary',
+        className
+      )}
+    >
+      <CardContent className={cn('flex h-full flex-col p-0', list && 'sm:grid sm:grid-cols-[220px_1fr]')}>
+        <div className={cn('relative overflow-hidden bg-muted', list ? 'aspect-[16/10] sm:aspect-auto' : 'aspect-[4/3]')}>
+          <Link to={`/rooms/${room.slug}`} className="block h-full w-full" aria-label={room.title}>
+            {image ? (
+              <img
+                src={image}
+                alt={room.title}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Home className="h-8 w-8" />
+                <span className="text-xs">Chưa có ảnh</span>
+              </div>
+            )}
           </Link>
-        </Button>
+
+          <div className="absolute left-2 top-2">
+            <StatusBadge value={room.isAvailable} />
+          </div>
+
+          {showActions && (
+            <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+              {showCompare && <CompareButton room={room} size="icon" />}
+              {showFavorite && <FavoriteButton roomId={room._id} size="icon" />}
+              {actionSlot}
+            </div>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+          <div className="min-w-0">
+            <Link to={`/rooms/${room.slug}`} className="line-clamp-2 text-sm font-semibold leading-5 hover:text-primary">
+              {room.title}
+            </Link>
+            {address && (
+              <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="line-clamp-2">{address}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="text-base font-bold text-primary">{formatRoomPrice(room.price)}</span>
+            {room.area ? <span className="inline-flex items-center gap-1"><Maximize2 className="h-3.5 w-3.5" />{room.area} m²</span> : null}
+            {room.capacity ? <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{room.capacity} người</span> : null}
+          </div>
+
+          {distanceText && (
+            <div className="inline-flex w-fit items-center gap-1.5 rounded-lg border bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary">
+              <MapPin className="h-3.5 w-3.5" />
+              Cách bạn {distanceText}
+            </div>
+          )}
+
+          {room.amenities?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {room.amenities.slice(0, amenityLimit).map((amenity) => (
+                <span key={amenity} className="rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+                  {amenitiesMap?.[amenity] || String(amenity).replace(/_/g, ' ')}
+                </span>
+              ))}
+              {room.amenities.length > amenityLimit && (
+                <span className="px-1 py-1 text-[10px] text-muted-foreground">+{room.amenities.length - amenityLimit}</span>
+              )}
+            </div>
+          )}
+
+          {showViewButton && (
+            <Button asChild size="sm" variant="outline" className="mt-auto h-8 rounded-lg">
+              <Link to={`/rooms/${room.slug}`}>
+                <Eye className="h-4 w-4" />
+                Xem chi tiết
+              </Link>
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

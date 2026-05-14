@@ -7,9 +7,15 @@ import { toast } from 'sonner'
 import { resetPasswordApi } from '@/services/authService'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Home, Eye, EyeOff } from 'lucide-react'
+import { CardContent, CardFooter } from '@/components/ui/card'
+import { ArrowLeft, KeyRound, LockKeyhole, ShieldCheck, TimerReset } from 'lucide-react'
+import {
+  AuthCard,
+  AuthShell,
+  FormField,
+  PasswordField,
+  SubmitButton,
+} from '@/pages/auth/components/AuthLayout'
 
 const schema = yup.object({
   password: yup.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').required('Vui lòng nhập mật khẩu mới'),
@@ -33,9 +39,10 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (data) => {
     if (!token) {
-      toast.error('Link đặt lại mật khẩu không hợp lệ')
+      toast.error('Liên kết đặt lại mật khẩu không hợp lệ')
       return
     }
+
     try {
       await resetPasswordApi(token, data.password)
       toast.success('Đặt lại mật khẩu thành công!')
@@ -47,65 +54,73 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <Home className="h-8 w-8" />
-            <span>PhòngTrọ VL</span>
-          </Link>
-        </div>
-
-        <Card className="shadow-sm">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl">Đặt lại mật khẩu</CardTitle>
-            <CardDescription>Nhập mật khẩu mới của bạn</CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="reset-password">Mật khẩu mới</Label>
-                <div className="relative">
-                  <Input
-                    id="reset-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...register('password')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+    <AuthShell
+      title="Đặt lại mật khẩu"
+      description="Tạo mật khẩu mới để bảo vệ tài khoản của bạn."
+      asideTitle="Hoàn tất khôi phục tài khoản bằng mật khẩu mới."
+      asideDescription="Chọn mật khẩu dễ nhớ với bạn nhưng khó đoán với người khác. Sau khi hoàn tất, hãy đăng nhập lại để tiếp tục sử dụng hệ thống."
+      asideItems={[
+        { icon: LockKeyhole, title: 'Mật khẩu mới', desc: 'Tối thiểu 6 ký tự theo yêu cầu hệ thống.' },
+        { icon: ShieldCheck, title: 'Bảo mật', desc: 'Không dùng lại mật khẩu quá dễ đoán.' },
+        { icon: TimerReset, title: 'Liên kết reset', desc: 'Chỉ dùng được khi token còn hiệu lực.' },
+      ]}
+      footerPrompt="Đã nhớ mật khẩu?"
+      footerLinkText="Đăng nhập"
+      footerLinkTo="/login"
+    >
+      <AuthCard
+        icon={KeyRound}
+        title="Đặt lại mật khẩu"
+        description={token ? 'Nhập mật khẩu mới và xác nhận lại để hoàn tất.' : 'Liên kết không hợp lệ hoặc thiếu mã xác thực.'}
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-5">
+            {!token && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm leading-6 text-destructive">
+                Không tìm thấy mã đặt lại mật khẩu trong liên kết. Vui lòng yêu cầu gửi email khôi phục mới.
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</Label>
-                <Input
-                  id="reset-confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  {...register('confirmPassword')}
-                />
-                {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-                )}
-              </div>
-            </CardContent>
+            <PasswordField
+              id="reset-password"
+              label="Mật khẩu mới"
+              autoComplete="new-password"
+              register={register('password')}
+              error={errors.password?.message}
+              show={showPassword}
+              onToggle={() => setShowPassword((value) => !value)}
+            />
 
-            <CardFooter>
-              <Button id="btn-reset-submit" type="submit" className="w-full" disabled={isSubmitting || !token}>
-                {isSubmitting ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
-    </div>
+            <FormField id="reset-confirm-password" label="Xác nhận mật khẩu mới" error={errors.confirmPassword?.message}>
+              <Input
+                id="reset-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                className="h-11 rounded-lg"
+                {...register('confirmPassword')}
+              />
+            </FormField>
+          </CardContent>
+
+          <CardFooter className="flex flex-col gap-3">
+            <SubmitButton
+              id="btn-reset-submit"
+              loading={isSubmitting}
+              loadingText="Đang đặt lại..."
+              disabled={!token}
+            >
+              Đặt lại mật khẩu
+            </SubmitButton>
+            <Button variant="ghost" asChild className="h-11 w-full rounded-lg">
+              <Link to="/login">
+                <ArrowLeft className="h-4 w-4" />
+                Quay lại đăng nhập
+              </Link>
+            </Button>
+          </CardFooter>
+        </form>
+      </AuthCard>
+    </AuthShell>
   )
 }

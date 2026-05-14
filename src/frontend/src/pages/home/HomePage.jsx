@@ -2,280 +2,287 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import {
-  Search, MapPin, TrendingUp, Clock, ArrowRight,
-  Sparkles, Shield, Zap, Building2, Map, ChevronRight,
+  ArrowRight,
+  BedDouble,
+  Building2,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Home,
+  Map,
+  MapPin,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Wifi,
 } from 'lucide-react'
 import { getRoomsApi } from '@/services/roomService'
-import { RoomCard } from '@/components/rooms/RoomCard'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
+import { RoomCard, RoomCardSkeleton } from '@/components/rooms/RoomCard'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import heroImage from '@/assets/home-hero-student-housing.jpg'
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function RoomCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border bg-card">
-      <Skeleton className="aspect-[16/10] w-full rounded-none" />
-      <div className="p-4 space-y-2.5">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-full" />
-        <div className="flex justify-between pt-1">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-14" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-const QUICK_FILTERS = [
-  { emoji: '💰', label: 'Dưới 2 triệu', href: '/search?maxPrice=2000000' },
-  { emoji: '📶', label: 'Có Wifi', href: '/search?amenities=["wifi"]' },
-  { emoji: '✅', label: 'Còn trống', href: '/search?isAvailable=true' },
-  { emoji: '🏢', label: 'Chung cư mini', href: '/search?roomType=chung_cư_mini' },
-  { emoji: '🏫', label: 'Ký túc xá', href: '/search?roomType=ký_túc_xá' },
-  { emoji: '❄️', label: 'Có điều hòa', href: '/search?amenities=["điều_hòa"]' },
+const CATEGORY_LINKS = [
+  { icon: BedDouble, label: 'Phòng trọ', href: '/search?roomType=phòng_trọ' },
+  { icon: Building2, label: 'Chung cư mini', href: '/search?roomType=chung_cư_mini' },
+  { icon: Home, label: 'Ký túc xá', href: '/search?roomType=ký_túc_xá' },
+  { icon: Wifi, label: 'Có Wifi', href: '/search?amenities=["wifi"]' },
+  { icon: CheckCircle2, label: 'Còn trống', href: '/search?isAvailable=true' },
+  { icon: Map, label: 'Xem bản đồ', href: '/search' },
 ]
 
 const FEATURES = [
   {
     icon: Sparkles,
-    title: 'Gợi ý AI thông minh',
-    desc: 'Thuật toán Hybrid kết hợp nội dung, vị trí và hành vi để gợi ý phòng phù hợp nhất với bạn.',
+    title: 'Gợi ý đúng nhu cầu',
+    desc: 'Lọc theo giá, khu vực, tiện ích và nhận gợi ý phù hợp hơn khi đăng nhập.',
   },
   {
-    icon: Map,
-    title: 'Bản đồ tương tác',
-    desc: 'Xem toàn bộ phòng trên bản đồ, tính khoảng cách và chỉ đường trực tiếp trong ứng dụng.',
+    icon: ShieldCheck,
+    title: 'Thông tin dễ kiểm tra',
+    desc: 'Ảnh, giá, diện tích, trạng thái và địa chỉ được trình bày rõ để so sánh nhanh.',
   },
   {
-    icon: Shield,
-    title: 'Tin đăng xác minh',
-    desc: 'Admin kiểm duyệt từng bài đăng. Chỉ phòng hợp lệ mới hiển thị trên hệ thống.',
-  },
-  {
-    icon: Zap,
-    title: 'Chat & Đặt lịch nhanh',
-    desc: 'Nhắn tin và đặt lịch xem phòng trực tiếp với chủ trọ qua hệ thống nhắn tin thời gian thực.',
+    icon: MessageCircle,
+    title: 'Liên hệ thuận tiện',
+    desc: 'Nhắn tin với chủ trọ, đặt lịch xem phòng và theo dõi lịch hẹn trong một nơi.',
   },
 ]
 
-const STATS = [
-  { val: '200+', label: 'Phòng đang đăng' },
-  { val: 'AI', label: 'Gợi ý thông minh' },
-  { val: '360°', label: 'Xem thực tế ảo' },
-]
-
-// ── Section header ────────────────────────────────────────────────────────────
-function SectionHead({ icon: Icon, title, href }) {
+function SectionHeader({ icon: Icon, title, desc, href, action = 'Xem tất cả' }) {
   return (
-    <div className="flex items-center justify-between mb-5">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-card text-primary">
+            <Icon className="h-4 w-4" />
+          </span>
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h2>
         </div>
-        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        {desc && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{desc}</p>}
       </div>
-      <Button variant="ghost" size="sm" asChild className="gap-1 text-sm text-primary hover:text-primary">
+      <Button variant="ghost" size="sm" asChild className="w-fit rounded-lg text-primary hover:text-primary">
         <Link to={href}>
-          Xem tất cả <ChevronRight className="h-3.5 w-3.5" />
+          {action}
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </Button>
     </div>
   )
 }
 
-// ── Feature card ──────────────────────────────────────────────────────────────
+function CategoryGrid() {
+  return (
+    <section className="border-b bg-background">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {CATEGORY_LINKS.map(({ icon: Icon, label, href }) => (
+            <Link
+              key={href}
+              to={href}
+              className="group flex min-h-24 flex-col justify-between rounded-lg border bg-card p-3 transition-colors hover:border-primary/50 hover:bg-primary/5 sm:p-4"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="mt-3 text-sm font-semibold leading-tight">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function FeatureCard({ icon: Icon, title, desc }) {
   return (
-    <div className="group flex flex-col gap-3 rounded-xl border bg-card p-5 hover:border-primary/40 hover:shadow-sm transition-all duration-200">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors duration-200">
+    <div className="rounded-lg border bg-card p-5 transition-colors hover:border-primary/40">
+      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-primary">
         <Icon className="h-5 w-5" />
       </div>
-      <div>
-        <h3 className="font-semibold text-sm mb-1">{title}</h3>
-        <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
-      </div>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{desc}</p>
     </div>
   )
 }
 
-// ── HomePage ──────────────────────────────────────────────────────────────────
+function RoomGrid({ loading, rooms, emptyText }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {loading
+        ? Array.from({ length: 6 }).map((_, index) => <RoomCardSkeleton key={index} />)
+        : rooms.length > 0
+          ? rooms.map((room) => <RoomCard key={room._id} room={room} />)
+          : <p className="col-span-full rounded-lg border bg-card py-12 text-center text-sm text-muted-foreground">{emptyText}</p>}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const navigate = useNavigate()
-  const user = useSelector((s) => s.auth?.user)
+  const user = useSelector((state) => state.auth?.user)
   const [q, setQ] = useState('')
+  const [area, setArea] = useState('')
   const [featured, setFeatured] = useState([])
   const [recent, setRecent] = useState([])
-  const [loadingF, setLoadingF] = useState(true)
-  const [loadingR, setLoadingR] = useState(true)
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+  const [loadingRecent, setLoadingRecent] = useState(true)
 
   useEffect(() => {
     getRoomsApi({ sort: 'views', limit: 6, status: 'approved' })
-      .then((r) => setFeatured(r.data?.data?.rooms || []))
+      .then((res) => setFeatured(res.data?.data?.rooms || []))
       .catch(() => setFeatured([]))
-      .finally(() => setLoadingF(false))
+      .finally(() => setLoadingFeatured(false))
 
     getRoomsApi({ sort: 'newest', limit: 6, status: 'approved' })
-      .then((r) => setRecent(r.data?.data?.rooms || []))
+      .then((res) => setRecent(res.data?.data?.rooms || []))
       .catch(() => setRecent([]))
-      .finally(() => setLoadingR(false))
+      .finally(() => setLoadingRecent(false))
   }, [])
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    navigate(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : '/search')
+  const handleSearch = (event) => {
+    event.preventDefault()
+    const keyword = [q.trim(), area.trim()].filter(Boolean).join(' ')
+    const params = new URLSearchParams()
+    if (keyword) params.set('q', keyword)
+    navigate(params.toString() ? `/search?${params.toString()}` : '/search')
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col bg-background">
+      <section className="relative overflow-hidden border-b bg-muted">
+        <div className="absolute inset-0">
+          <img src={heroImage} alt="Không gian phòng trọ sinh viên" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/55" />
+        </div>
 
-      {/* ═══ HERO ══════════════════════════════════════════════════════════ */}
-      <section className="border-b bg-card">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:py-20 lg:py-24">
+        <div className="relative mx-auto flex min-h-[500px] max-w-7xl flex-col justify-center px-4 py-12 text-white sm:px-6 lg:min-h-[620px] lg:px-8">
+          <div className="max-w-2xl">
+            <Badge className="mb-4 border-white/25 bg-white/15 text-white hover:bg-white/15">
+              <MapPin className="h-3.5 w-3.5" />
+              Vĩnh Long · Phòng trọ sinh viên
+            </Badge>
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+              Tìm phòng trọ phù hợp, xem thông tin rõ ràng
+            </h1>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-white/85 sm:text-base">
+              Khám phá phòng trọ, chung cư mini và ký túc xá quanh Vĩnh Long. So sánh giá, tiện ích, vị trí và liên hệ chủ trọ nhanh hơn.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" asChild className="rounded-lg">
+                <Link to="/search">
+                  Khám phá phòng
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="secondary" asChild className="rounded-lg bg-white text-foreground hover:bg-white/90">
+                <Link to={user ? '/recommend' : '/login'}>
+                  Gợi ý cho bạn
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
 
-          {/* Pill label */}
-          <Badge variant="secondary" className="mb-5 rounded-full px-3 py-1 gap-1.5 text-xs font-medium">
-            <MapPin className="h-3 w-3" />
-            Vĩnh Long · Gợi ý phòng trọ thông minh
-          </Badge>
-
-          {/* Headline */}
-          <h1 className="mb-4 text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Tìm phòng trọ{' '}
-            <span className="text-primary">phù hợp nhất</span>
-            {' '}cho bạn
-          </h1>
-
-          <p className="mb-8 text-base text-muted-foreground sm:text-lg max-w-xl mx-auto leading-relaxed">
-            Hàng trăm phòng trọ chất lượng tại Vĩnh Long, được gợi ý thông minh theo vị trí và nhu cầu của bạn.
-          </p>
-
-          {/* Search bar */}
-          <form
-            onSubmit={handleSearch}
-            className="mx-auto flex max-w-xl items-center gap-2 rounded-xl border bg-background p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/30 transition-all"
-          >
-            <Search className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
-            <input
-              type="text"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Tên phòng, địa chỉ, khu vực..."
-              className="flex-1 bg-transparent text-sm outline-none py-1.5 placeholder:text-muted-foreground"
-            />
-            <Button type="submit" size="sm" className="shrink-0 rounded-lg px-4">
-              Tìm ngay
+        <div className="relative mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:-mt-20 lg:px-8 lg:pb-0">
+          <form onSubmit={handleSearch} className="grid gap-3 rounded-xl border bg-background p-3 shadow-xl sm:p-4 md:grid-cols-[1.3fr_1fr_auto]">
+            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+              <Search className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium text-muted-foreground">Bạn muốn tìm gì?</span>
+                <input
+                  value={q}
+                  onChange={(event) => setQ(event.target.value)}
+                  placeholder="Tên phòng, loại phòng, tiện ích..."
+                  className="mt-1 w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+                />
+              </span>
+            </label>
+            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+              <MapPin className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium text-muted-foreground">Khu vực</span>
+                <input
+                  value={area}
+                  onChange={(event) => setArea(event.target.value)}
+                  placeholder="Phường, đường, gần trường..."
+                  className="mt-1 w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+                />
+              </span>
+            </label>
+            <Button type="submit" size="lg" className="min-h-12 rounded-lg px-8 md:min-h-14">
+              Tìm kiếm
             </Button>
           </form>
-
-          {/* Stats strip */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-8">
-            {STATS.map(({ val, label }, i) => (
-              <>
-                <div key={val} className="text-center">
-                  <p className="text-2xl font-extrabold text-foreground">{val}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                </div>
-                {i < STATS.length - 1 && (
-                  <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                )}
-              </>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ═══ QUICK FILTER CHIPS ════════════════════════════════════════════ */}
-      <div className="border-b bg-background sticky top-14 z-30">
-        <div className="mx-auto max-w-7xl overflow-x-auto px-4 py-2.5 scrollbar-none">
-          <div className="flex items-center gap-2 min-w-max">
-            <span className="text-xs font-medium text-muted-foreground shrink-0 mr-1">Tìm nhanh:</span>
-            {QUICK_FILTERS.map((f) => (
-              <Link
-                key={f.href}
-                to={f.href}
-                className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs font-medium whitespace-nowrap transition-all hover:border-primary hover:text-primary hover:bg-primary/5"
-              >
-                <span>{f.emoji}</span>{f.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
+      <CategoryGrid />
 
-      {/* ═══ MAIN CONTENT ══════════════════════════════════════════════════ */}
-      <div className="mx-auto w-full max-w-7xl px-4 py-10 space-y-14 flex-1">
-
-        {/* Featured rooms */}
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-12 px-4 py-8 sm:px-6 sm:py-10 lg:space-y-14 lg:px-8">
         <section>
-          <SectionHead icon={TrendingUp} title="Phòng nổi bật" href="/search?sort=views" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {loadingF
-              ? Array.from({ length: 6 }).map((_, i) => <RoomCardSkeleton key={i} />)
-              : featured.length > 0
-                ? featured.map((r) => <RoomCard key={r._id} room={r} />)
-                : <p className="col-span-3 text-center text-sm text-muted-foreground py-12">Chưa có phòng nổi bật.</p>}
-          </div>
+          <SectionHeader
+            icon={TrendingUp}
+            title="Phòng nổi bật"
+            desc="Các tin được quan tâm nhiều, phù hợp để bạn bắt đầu so sánh nhanh."
+            href="/search?sort=views"
+          />
+          <RoomGrid loading={loadingFeatured} rooms={featured} emptyText="Chưa có phòng nổi bật." />
         </section>
 
-        {/* Why choose us */}
-        <section>
-          <div className="text-center mb-8">
-            <Badge variant="outline" className="mb-3 rounded-full text-xs">Tính năng</Badge>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Tại sao chọn PhòngTrọ VL?</h2>
-            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-              Hệ thống kết hợp AI và bản đồ thực tế để mang đến trải nghiệm tìm phòng tốt nhất.
+        <section className="rounded-xl border bg-muted/25 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-6 max-w-2xl">
+            <Badge variant="outline" className="mb-3">Trải nghiệm tìm phòng</Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Tìm đúng phòng, liên hệ nhanh hơn</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Website tập trung vào các thao tác người thuê và chủ trọ cần dùng mỗi ngày, từ tìm kiếm đến đặt lịch xem phòng.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => <FeatureCard key={f.title} {...f} />)}
+          <div className="grid gap-4 md:grid-cols-3">
+            {FEATURES.map((feature) => <FeatureCard key={feature.title} {...feature} />)}
           </div>
         </section>
 
-        {/* Recent rooms */}
         <section>
-          <SectionHead icon={Clock} title="Mới đăng gần đây" href="/search?sort=newest" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {loadingR
-              ? Array.from({ length: 6 }).map((_, i) => <RoomCardSkeleton key={i} />)
-              : recent.length > 0
-                ? recent.map((r) => <RoomCard key={r._id} room={r} />)
-                : <p className="col-span-3 text-center text-sm text-muted-foreground py-12">Chưa có phòng mới.</p>}
-          </div>
+          <SectionHeader
+            icon={Clock}
+            title="Mới đăng gần đây"
+            desc="Cập nhật các phòng mới để bạn không bỏ lỡ lựa chọn phù hợp."
+            href="/search?sort=newest"
+          />
+          <RoomGrid loading={loadingRecent} rooms={recent} emptyText="Chưa có phòng mới." />
         </section>
+      </main>
 
-      </div>
-
-      {/* ═══ CTA BANNER ════════════════════════════════════════════════════ */}
       <section className="border-t bg-muted/30">
-        <div className="mx-auto max-w-4xl px-4 py-14 text-center space-y-5">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border bg-card text-primary mx-auto shadow-sm">
-            <Building2 className="h-6 w-6" />
-          </div>
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto] md:items-center lg:px-8 lg:py-12">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Bạn là chủ trọ?</h2>
-            <p className="mt-2 text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
-              Đăng tin miễn phí, tiếp cận hàng nghìn sinh viên Vĩnh Long đang tìm phòng. Quản lý lịch hẹn và chat trực tiếp.
+            <Badge variant="secondary" className="mb-3">
+              <CalendarCheck className="h-3.5 w-3.5" />
+              Dành cho chủ trọ
+            </Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Có phòng cần cho thuê?</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Đăng tin, quản lý phòng, lịch hẹn và trao đổi với sinh viên đang tìm phòng quanh Vĩnh Long.
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" className="rounded-xl gap-2 shadow-sm" asChild>
+          <div className="flex flex-col gap-3 sm:flex-row md:justify-end">
+            <Button size="lg" asChild className="rounded-lg">
               <Link to="/register">
-                <Building2 className="h-4 w-4" />Đăng ký chủ trọ
+                <Building2 className="h-4 w-4" />
+                Đăng ký chủ trọ
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="rounded-xl" asChild>
+            <Button size="lg" variant="outline" asChild className="rounded-lg">
               <Link to="/search">Xem phòng hiện có</Link>
             </Button>
           </div>
         </div>
       </section>
-
     </div>
   )
 }

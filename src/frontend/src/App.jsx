@@ -65,13 +65,13 @@ function AppLayout({ children, fullHeight = false, noFooter = false }) {
       className={
         fullHeight
           ? 'flex h-svh flex-col overflow-hidden bg-background'
-          : 'flex min-h-svh flex-col bg-background'
+          : 'flex min-h-svh flex-col overflow-x-hidden bg-background'
       }
     >
       <Navbar />
       <main
         className={[
-          'flex-1',
+          'flex-1 pt-16',
           fullHeight ? 'flex flex-col overflow-hidden min-h-0' : '',
         ].join(' ')}
       >

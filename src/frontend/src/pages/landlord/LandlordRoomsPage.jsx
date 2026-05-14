@@ -1,293 +1,209 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
-  Plus, Pencil, Trash2, Eye, Home, DoorOpen,
-  TrendingUp, Clock, AlertTriangle, Search,
-  RefreshCw, MapPin, LayoutGrid, LayoutList,
+  AlertTriangle,
+  CircleSlash,
+  DoorOpen,
+  Eye,
+  Home,
+  LayoutGrid,
+  LayoutList,
+  MapPin,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
 } from 'lucide-react'
-import { getMyRoomsApi, deleteRoomApi } from '@/services/roomService'
+import { deleteRoomApi, getMyRoomsApi } from '@/services/roomService'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Dialog, DialogContent, DialogDescription,
-  DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  LandlordContent,
+  LandlordEmptyState,
+  LandlordMetricCard,
+  LandlordPageHeader,
+  LandlordTabs,
+  StatusBadge,
+} from './components/LandlordUI'
 import { cn } from '@/lib/utils'
 
-// ── Helpers ────────────────────────────────────────────────────────────
+const FILTERS = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'approved', label: 'Đã duyệt' },
+  { value: 'pending', label: 'Chờ duyệt' },
+  { value: 'rejected', label: 'Từ chối' },
+  { value: 'flagged', label: 'Vi phạm' },
+]
+
 function formatCurrency(value) {
-  if (!value) return '—'
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
+  if (!value) return 'Đang cập nhật'
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 function formatAddress(address) {
   if (!address) return ''
   if (typeof address === 'string') return address
-  // legacy object fallback
   return address.fullAddress || [address.street, address.ward, address.district, address.city].filter(Boolean).join(', ')
 }
 
-// ── Status config ──────────────────────────────────────────────────────
-const STATUS_CFG = {
-  approved: { label: 'Đã duyệt',   cls: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
-  pending:  { label: 'Chờ duyệt',  cls: 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-  rejected: { label: 'Từ chối',    cls: 'border-red-200 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' },
-  flagged:  { label: 'Vi phạm',    cls: 'border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
-}
-
-const FILTER_TABS = [
-  { value: 'all',      label: 'Tất cả' },
-  { value: 'approved', label: 'Đã duyệt' },
-  { value: 'pending',  label: 'Chờ duyệt' },
-  { value: 'rejected', label: 'Từ chối' },
-  { value: 'flagged',  label: 'Vi phạm' },
-]
-
-// ── Stat Card ──────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon: Icon, color }) {
-  const colors = {
-    blue:   { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-400',   ring: 'ring-blue-500/20' },
-    green:  { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-500/20' },
-    amber:  { bg: 'bg-amber-500/10',  text: 'text-amber-600 dark:text-amber-400', ring: 'ring-amber-500/20' },
-    violet: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400', ring: 'ring-violet-500/20' },
-    red:    { bg: 'bg-red-500/10',    text: 'text-red-600 dark:text-red-400',     ring: 'ring-red-500/20' },
-  }
-  const c = colors[color] || colors.blue
+function RoomImage({ room, className }) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="flex items-center gap-4 p-5">
-        <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1', c.bg, c.ring)}>
-          <Icon className={cn('h-5 w-5', c.text)} />
+    <div className={cn('relative overflow-hidden bg-muted', className)}>
+      {room.images?.[0] ? (
+        <img src={room.images[0]} alt={room.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+          <Home className="h-8 w-8" />
+          <span className="text-xs">Chưa có ảnh</span>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground leading-none mb-1">{label}</p>
-          <p className="text-2xl font-bold leading-none">{value}</p>
-          {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
-// ── Room Card ──────────────────────────────────────────────────────────
-function RoomCard({ room, onDelete, deleting }) {
-  const sc = STATUS_CFG[room.status] || STATUS_CFG.pending
-  const addr = formatAddress(room.address)
+function RoomActions({ room, onDelete, deletingId }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" className="h-8 flex-1 rounded-lg text-xs" asChild>
+        <Link to={`/rooms/${room.slug}`}>
+          <Eye className="h-3.5 w-3.5" />
+          Xem
+        </Link>
+      </Button>
+      <Button variant="secondary" size="sm" className="h-8 flex-1 rounded-lg text-xs" asChild>
+        <Link to={`/landlord/rooms/${room._id}/edit`}>
+          <Pencil className="h-3.5 w-3.5" />
+          Sửa
+        </Link>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+        onClick={() => onDelete(room)}
+        disabled={deletingId === room._id}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  )
+}
+
+function RoomGridCard({ room, onDelete, deletingId }) {
+  const address = formatAddress(room.address)
+  const unavailable = !room.isAvailable
 
   return (
-    <Card className={cn(
-      'group overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col',
-      room.status === 'flagged'  && 'border-orange-300 dark:border-orange-800',
-      room.status === 'rejected' && 'border-red-300 dark:border-red-800 opacity-80',
-    )}>
-      {/* Thumbnail */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-muted shrink-0">
-        {room.images?.[0] ? (
-          <img
-            src={room.images[0]} alt={room.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground/40">
-            <Home className="h-8 w-8" />
-            <span className="text-xs">Chưa có ảnh</span>
-          </div>
-        )}
-
-        {/* Overlay badges */}
-        <div className="absolute inset-x-2 top-2 flex items-center justify-between">
-          {/* Trạng thái duyệt */}
-          <Badge variant="outline" className={cn('text-[10px] h-5 shadow-sm backdrop-blur-sm', sc.cls)}>
-            {sc.label}
-          </Badge>
-          {/* Trạng thái phòng */}
-          <Badge variant="outline" className={cn(
-            'text-[10px] h-5 shadow-sm backdrop-blur-sm',
-            room.isAvailable
-              ? 'border-sky-200 bg-sky-50/90 text-sky-700'
-              : 'border-slate-200 bg-slate-50/90 text-slate-600'
-          )}>
-            {room.isAvailable ? 'Còn trống' : 'Đã cho thuê'}
-          </Badge>
+    <Card className={cn('group overflow-hidden transition-colors hover:border-primary/40', room.status === 'rejected' && 'border-red-200')}>
+      <RoomImage room={room} className="aspect-[4/3]" />
+      <CardContent className="space-y-4 p-4">
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge status={room.status || 'pending'} type="approval" compact />
+          <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
         </div>
 
-        {/* View count chip */}
-        {room.viewCount > 0 && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm">
-            <Eye className="h-2.5 w-2.5" />
-            {room.viewCount}
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="flex flex-1 flex-col p-4 gap-3">
-        {/* Title + address */}
-        <div className="space-y-1 min-w-0">
-          <h3 className="font-semibold text-sm leading-snug line-clamp-2">{room.title}</h3>
-          {addr && (
-            <p className="flex items-start gap-1 text-xs text-muted-foreground line-clamp-1">
-              <MapPin className="h-3 w-3 mt-0.5 shrink-0" />{addr}
+        <div className="min-w-0 space-y-1">
+          <h2 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5">{room.title}</h2>
+          {address && (
+            <p className="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="line-clamp-2">{address}</span>
             </p>
           )}
         </div>
 
-        {/* Key stats */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-muted/40 px-2 py-1.5 text-center">
-            <p className="text-[10px] text-muted-foreground">Giá/tháng</p>
-            <p className="text-xs font-bold text-primary mt-0.5 line-clamp-1">{formatCurrency(room.price)}</p>
+        <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/30 p-2 text-center">
+          <div>
+            <p className="text-[10px] text-muted-foreground">Giá</p>
+            <p className="mt-1 truncate text-xs font-bold text-primary">{formatCurrency(room.price)}</p>
           </div>
-          <div className="rounded-lg border bg-muted/40 px-2 py-1.5 text-center">
+          <div>
             <p className="text-[10px] text-muted-foreground">Diện tích</p>
-            <p className="text-xs font-semibold mt-0.5">{room.area} m²</p>
+            <p className="mt-1 text-xs font-semibold">{room.area || 0} m²</p>
           </div>
-          <div className="rounded-lg border bg-muted/40 px-2 py-1.5 text-center">
+          <div>
             <p className="text-[10px] text-muted-foreground">Sức chứa</p>
-            <p className="text-xs font-semibold mt-0.5">{room.capacity} người</p>
+            <p className="mt-1 text-xs font-semibold">{room.capacity || 1} người</p>
           </div>
         </div>
 
-        {/* Warning for flagged/rejected */}
-        {(room.status === 'flagged' || room.status === 'rejected') && (
+        {(room.status === 'flagged' || room.status === 'rejected' || unavailable) && (
           <div className={cn(
-            'flex items-start gap-2 rounded-lg p-2.5 text-xs',
-            room.status === 'flagged'
-              ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+            'flex gap-2 rounded-lg border px-3 py-2 text-xs leading-5',
+            room.status === 'flagged' || room.status === 'rejected'
+              ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+              : 'border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
           )}>
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              {room.status === 'flagged'
-                ? 'Phòng này đang bị ẩn do vi phạm. Vui lòng liên hệ admin.'
-                : 'Tin đăng bị từ chối. Hãy chỉnh sửa và đăng lại.'}
+              {room.status === 'flagged' && 'Tin đang bị ẩn do vi phạm. Vui lòng kiểm tra và chỉnh sửa.'}
+              {room.status === 'rejected' && 'Tin đã bị từ chối. Hãy cập nhật nội dung trước khi đăng lại.'}
+              {room.status !== 'flagged' && room.status !== 'rejected' && unavailable && 'Phòng đã cho thuê, sinh viên sẽ thấy trạng thái này khi xem tin.'}
             </span>
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 mt-auto pt-1">
-          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" asChild>
-            <Link to={`/rooms/${room.slug}`}><Eye className="h-3.5 w-3.5" />Xem</Link>
-          </Button>
-          <Button variant="secondary" size="sm" className="flex-1 h-8 text-xs gap-1" asChild>
-            <Link to={`/landlord/rooms/${room._id}/edit`}><Pencil className="h-3.5 w-3.5" />Sửa</Link>
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-            onClick={() => onDelete(room)}
-            disabled={deleting === room._id}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Eye className="h-3.5 w-3.5" />
+            {(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem
+          </span>
         </div>
-      </div>
+
+        <RoomActions room={room} onDelete={onDelete} deletingId={deletingId} />
+      </CardContent>
     </Card>
   )
 }
 
-// ── Room Card (List / nằm ngang) ──────────────────────────────────
-function RoomCardList({ room, onDelete, deleting }) {
-  const sc = STATUS_CFG[room.status] || STATUS_CFG.pending
-  const addr = formatAddress(room.address)
+function RoomListItem({ room, onDelete, deletingId }) {
+  const address = formatAddress(room.address)
 
   return (
-    <Card className={cn(
-      'group overflow-hidden transition-all duration-200 hover:shadow-md',
-      room.status === 'flagged'  && 'border-orange-300 dark:border-orange-800',
-      room.status === 'rejected' && 'border-red-300 dark:border-red-800 opacity-80',
-    )}>
-      <CardContent className="flex gap-0 p-0">
-        {/* Thumbnail */}
-        <div className="relative w-36 sm:w-48 shrink-0 overflow-hidden bg-muted">
-          {room.images?.[0] ? (
-            <img
-              src={room.images[0]} alt={room.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground/40">
-              <Home className="h-6 w-6" />
-            </div>
-          )}
-          {/* Status badge */}
-          <div className="absolute bottom-2 left-2">
-            <Badge variant="outline" className={cn('text-[10px] h-5 shadow-sm backdrop-blur-sm', sc.cls)}>
-              {sc.label}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="flex flex-1 min-w-0 flex-col justify-between p-3 gap-2">
-          {/* Top: title + address + availability */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="font-semibold text-sm leading-snug line-clamp-1">{room.title}</h3>
-              {addr && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                  <MapPin className="h-3 w-3 shrink-0" />{addr}
+    <Card className="group overflow-hidden transition-colors hover:border-primary/40">
+      <CardContent className="grid gap-0 p-0 sm:grid-cols-[220px_1fr]">
+        <RoomImage room={room} className="aspect-[16/9] sm:aspect-auto" />
+        <div className="min-w-0 space-y-4 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge status={room.status || 'pending'} type="approval" compact />
+                <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
+              </div>
+              <h2 className="line-clamp-1 pt-1 font-semibold">{room.title}</h2>
+              {address && (
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span className="line-clamp-1">{address}</span>
                 </p>
               )}
             </div>
-            <Badge variant="outline" className={cn(
-              'text-[10px] h-5 shrink-0',
-              room.isAvailable
-                ? 'border-sky-200 bg-sky-50 text-sky-700'
-                : 'border-slate-200 bg-slate-50 text-slate-600'
-            )}>
-              {room.isAvailable ? 'Trống' : 'Thuê'}
-            </Badge>
-          </div>
-
-          {/* Mid: stats inline */}
-          <div className="flex items-center gap-3 text-xs">
-            <span className="font-bold text-primary">{formatCurrency(room.price)}</span>
-            <span className="text-muted-foreground">• {room.area} m²</span>
-            <span className="text-muted-foreground">• {room.capacity} người</span>
-            {room.viewCount > 0 && (
-              <span className="flex items-center gap-0.5 text-muted-foreground ml-auto">
-                <Eye className="h-3 w-3" />{room.viewCount}
-              </span>
-            )}
-          </div>
-
-          {/* Warning */}
-          {(room.status === 'flagged' || room.status === 'rejected') && (
-            <div className={cn(
-              'flex items-center gap-1.5 rounded px-2 py-1 text-xs',
-              room.status === 'flagged'
-                ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-            )}>
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span className="line-clamp-1">
-                {room.status === 'flagged' ? 'Phòng bị ẩn do vi phạm.' : 'Tin đăng bị từ chối.'}
-              </span>
+            <div className="text-left md:text-right">
+              <p className="font-bold text-primary">{formatCurrency(room.price)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{room.area || 0} m² · {room.capacity || 1} người</p>
             </div>
-          )}
+          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1 px-2" asChild>
-              <Link to={`/rooms/${room.slug}`}><Eye className="h-3 w-3" />Xem</Link>
-            </Button>
-            <Button variant="secondary" size="sm" className="h-7 text-xs gap-1 px-2" asChild>
-              <Link to={`/landlord/rooms/${room._id}/edit`}><Pencil className="h-3 w-3" />Sửa</Link>
-            </Button>
-            <Button
-              variant="ghost" size="sm"
-              className="h-7 w-7 p-0 ml-auto text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-              onClick={() => onDelete(room)}
-              disabled={deleting === room._id}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+          <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-muted-foreground">{(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem</span>
+            <div className="sm:w-[260px]">
+              <RoomActions room={room} onDelete={onDelete} deletingId={deletingId} />
+            </div>
           </div>
         </div>
       </CardContent>
@@ -295,15 +211,14 @@ function RoomCardList({ room, onDelete, deleting }) {
   )
 }
 
-// ── Main ────────────────────────────────────────────────────────────────
 export default function LandlordRoomsPage() {
-  const [rooms, setRooms]               = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [deletingId, setDeletingId]     = useState('')
+  const [rooms, setRooms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [search, setSearch]             = useState('')
-  const [activeTab, setActiveTab]       = useState('all')
-  const [viewMode, setViewMode]         = useState('grid') // 'grid' | 'list'
+  const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState('all')
+  const [viewMode, setViewMode] = useState('grid')
 
   const fetchMyRooms = async () => {
     try {
@@ -317,15 +232,45 @@ export default function LandlordRoomsPage() {
     }
   }
 
-  useEffect(() => { fetchMyRooms() }, [])
+  useEffect(() => {
+    fetchMyRooms()
+  }, [])
+
+  const stats = useMemo(() => ({
+    total: rooms.length,
+    available: rooms.filter((room) => room.isAvailable && room.status === 'approved').length,
+    rented: rooms.filter((room) => !room.isAvailable).length,
+    pending: rooms.filter((room) => room.status === 'pending').length,
+    issues: rooms.filter((room) => room.status === 'flagged' || room.status === 'rejected').length,
+  }), [rooms])
+
+  const counts = useMemo(() => {
+    const result = { all: rooms.length }
+    rooms.forEach((room) => {
+      result[room.status] = (result[room.status] || 0) + 1
+    })
+    return result
+  }, [rooms])
+
+  const filteredRooms = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+    return rooms.filter((room) => {
+      const byStatus = activeTab === 'all' || room.status === activeTab
+      const bySearch = !keyword || [room.title, formatAddress(room.address)]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+      return byStatus && bySearch
+    })
+  }, [rooms, activeTab, search])
 
   const handleDelete = async () => {
     if (!deleteTarget?._id) return
     try {
       setDeletingId(deleteTarget._id)
       await deleteRoomApi(deleteTarget._id)
+      setRooms((prev) => prev.filter((room) => room._id !== deleteTarget._id))
       toast.success('Đã xoá phòng')
-      setRooms(prev => prev.filter(r => r._id !== deleteTarget._id))
     } catch (error) {
       toast.error(error.response?.data?.message || 'Xoá phòng thất bại')
     } finally {
@@ -334,184 +279,134 @@ export default function LandlordRoomsPage() {
     }
   }
 
-  // ── Derived stats ────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    total:     rooms.length,
-    available: rooms.filter(r => r.isAvailable && r.status === 'approved').length,
-    pending:   rooms.filter(r => r.status === 'pending').length,
-    flagged:   rooms.filter(r => r.status === 'flagged' || r.status === 'rejected').length,
-    views:     rooms.reduce((s, r) => s + (r.viewCount || 0), 0),
-  }), [rooms])
-
-  // ── Filtered rooms ─────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = activeTab === 'all' ? rooms : rooms.filter(r => r.status === activeTab)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(r =>
-        r.title?.toLowerCase().includes(q) ||
-        formatAddress(r.address).toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [rooms, activeTab, search])
-
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Quản lý phòng trọ</h1>
-          <p className="text-sm text-muted-foreground">Tạo, chỉnh sửa và quản lý tin đăng của bạn</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={fetchMyRooms} disabled={loading}>
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </Button>
-          <Button asChild>
+    <div className="min-h-screen bg-muted/20">
+      <LandlordPageHeader
+        title="Quản lý phòng trọ"
+        description="Theo dõi tình trạng duyệt tin, trạng thái cho thuê và hiệu quả từng phòng."
+        icon={Home}
+        onRefresh={fetchMyRooms}
+        refreshing={loading}
+        action={(
+          <Button asChild className="h-9 rounded-lg">
             <Link to="/landlord/rooms/create">
-              <Plus className="h-4 w-4" />Tạo phòng mới
+              <Plus className="h-4 w-4" />
+              Đăng phòng
             </Link>
           </Button>
-        </div>
-      </div>
+        )}
+      />
 
-      {/* Stat Cards */}
-      {loading ? (
+      <LandlordContent>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[0,1,2,3].map(i => (
-            <Card key={i}><CardContent className="flex items-center gap-4 p-5">
-              <Skeleton className="h-11 w-11 rounded-xl shrink-0" />
-              <div className="space-y-2 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-12" /></div>
-            </CardContent></Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Tổng tin đăng"     value={stats.total}     icon={Home}       color="blue" />
-          <StatCard label="Đang cho thuê"     value={stats.available} icon={DoorOpen}   color="green"
-            sub={stats.total > 0 ? `${Math.round(stats.available/stats.total*100)}% tin đã duyệt` : ''} />
-          <StatCard label="Chờ duyệt / cảnh báo" value={stats.pending + stats.flagged}
-            icon={stats.flagged > 0 ? AlertTriangle : Clock}
-            color={stats.flagged > 0 ? 'red' : 'amber'}
-            sub={stats.flagged > 0 ? `${stats.flagged} phòng vi phạm` : ''} />
-          <StatCard label="Lượt xem"          value={stats.views.toLocaleString('vi')} icon={TrendingUp} color="violet" />
-        </div>
-      )}
-
-      {/* Filter + Search */}
-      {!loading && rooms.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status tabs */}
-          <div className="flex gap-0 border-b flex-1 min-w-0 overflow-x-auto">
-            {FILTER_TABS.map(tab => {
-              const count = tab.value === 'all' ? rooms.length : rooms.filter(r => r.status === tab.value).length
-              if (count === 0 && tab.value !== 'all') return null
-              return (
-                <button key={tab.value} onClick={() => setActiveTab(tab.value)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0',
-                    activeTab === tab.value
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  )}>
-                  {tab.label}
-                  <span className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
-                    activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  )}>{count}</span>
-                </button>
-              )
-            })}
-          </div>
-          {/* View toggle */}
-          <div className="flex items-center gap-1 border rounded-lg p-1">
-            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-7 w-7 p-0" onClick={() => setViewMode('grid')}><LayoutGrid className="h-4 w-4" /></Button>
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-7 w-7 p-0" onClick={() => setViewMode('list')}><LayoutList className="h-4 w-4" /></Button>
-          </div>
-          {/* Search */}
-          <div className="relative shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Tìm theo tên, địa chỉ..."
-              className="h-9 pl-8 w-48 text-sm"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {[0,1,2].map(i => (
-            <Card key={i} className="overflow-hidden">
-              <Skeleton className="aspect-[16/9] w-full rounded-none" />
-              <div className="p-4 space-y-3">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <div className="grid grid-cols-3 gap-2">
-                  <Skeleton className="h-12" /><Skeleton className="h-12" /><Skeleton className="h-12" />
+          {loading ? [0, 1, 2, 3].map((item) => (
+            <Card key={item}>
+              <CardContent className="flex items-center gap-4 p-5">
+                <Skeleton className="h-11 w-11 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-7 w-14" />
                 </div>
-                <div className="flex gap-2"><Skeleton className="h-8 flex-1" /><Skeleton className="h-8 flex-1" /><Skeleton className="h-8 w-8" /></div>
-              </div>
+              </CardContent>
             </Card>
-          ))}
+          )) : (
+            <>
+              <LandlordMetricCard icon={Home} label="Tổng tin đăng" value={stats.total} description="Tất cả phòng của bạn" tone="blue" />
+              <LandlordMetricCard icon={DoorOpen} label="Còn trống" value={stats.available} description="Đã duyệt và sẵn sàng cho thuê" tone="emerald" />
+              <LandlordMetricCard icon={CircleSlash} label="Đã cho thuê" value={stats.rented} description="Phòng đang tạm dừng nhận khách" tone="slate" />
+              <LandlordMetricCard icon={AlertTriangle} label="Cần xử lý" value={stats.pending + stats.issues} description={`${stats.pending} chờ duyệt, ${stats.issues} có vấn đề`} tone={stats.issues ? 'red' : 'amber'} urgent={stats.issues > 0} />
+            </>
+          )}
         </div>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-              {rooms.length === 0 ? <Home className="h-8 w-8 text-muted-foreground" /> : <Search className="h-7 w-7 text-muted-foreground" />}
-            </div>
-            {rooms.length === 0 ? (
-              <>
-                <div>
-                  <h2 className="text-lg font-semibold">Bạn chưa có phòng nào</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Tạo tin đăng đầu tiên để bắt đầu nhận liên hệ từ sinh viên.</p>
+
+        {!loading && rooms.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <LandlordTabs
+                value={activeTab}
+                onChange={setActiveTab}
+                items={FILTERS.map((item) => ({ ...item, count: counts[item.value] || 0 }))}
+              />
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative sm:w-72">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm theo tên hoặc địa chỉ"
+                    className="h-10 rounded-lg pl-9"
+                  />
                 </div>
-                <Button asChild><Link to="/landlord/rooms/create"><Plus className="h-4 w-4" />Tạo phòng ngay</Link></Button>
-              </>
-            ) : (
-              <div>
-                <h2 className="text-lg font-semibold">Không tìm thấy</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm.</p>
+                <div className="grid grid-cols-2 rounded-lg border bg-card p-1">
+                  <Button type="button" size="icon" variant={viewMode === 'grid' ? 'secondary' : 'ghost'} className="h-8 w-8 rounded-md" onClick={() => setViewMode('grid')}>
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" size="icon" variant={viewMode === 'list' ? 'secondary' : 'ghost'} className="h-8 w-8 rounded-md" onClick={() => setViewMode('list')}>
+                    <LayoutList className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        viewMode === 'grid' ? (
+            </div>
+          </div>
+        )}
+
+        {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map(room => (
-              <RoomCard key={room._id} room={room} onDelete={setDeleteTarget} deleting={deletingId} />
+            {[0, 1, 2].map((item) => (
+              <Card key={item} className="overflow-hidden">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <CardContent className="space-y-3 p-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredRooms.length === 0 ? (
+          <LandlordEmptyState
+            icon={rooms.length ? Search : Home}
+            title={rooms.length ? 'Không tìm thấy phòng phù hợp' : 'Bạn chưa có phòng nào'}
+            description={rooms.length ? 'Thử đổi bộ lọc hoặc nhập từ khoá ngắn hơn.' : 'Đăng phòng đầu tiên để sinh viên có thể tìm thấy và đặt lịch xem phòng.'}
+            action={!rooms.length && (
+              <Button asChild className="mt-1 rounded-lg">
+                <Link to="/landlord/rooms/create">
+                  <Plus className="h-4 w-4" />
+                  Đăng phòng đầu tiên
+                </Link>
+              </Button>
+            )}
+          />
+        ) : viewMode === 'grid' ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredRooms.map((room) => (
+              <RoomGridCard key={room._id} room={room} onDelete={setDeleteTarget} deletingId={deletingId} />
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map(room => (
-              <RoomCardList key={room._id} room={room} onDelete={setDeleteTarget} deleting={deletingId} />
+          <div className="space-y-3">
+            {filteredRooms.map((room) => (
+              <RoomListItem key={room._id} room={room} onDelete={setDeleteTarget} deletingId={deletingId} />
             ))}
           </div>
-        )
-      )}
+        )}
+      </LandlordContent>
 
-      {/* Delete dialog */}
-      <Dialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-500" />Xoá phòng này?
-            </DialogTitle>
+            <DialogTitle>Xoá phòng này?</DialogTitle>
             <DialogDescription>
-              Tin đăng <strong>"{deleteTarget?.title}"</strong> sẽ bị xoá vĩnh viễn và không thể khôi phục.
+              Tin đăng "{deleteTarget?.title}" sẽ bị xoá vĩnh viễn và không thể khôi phục.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Huỷ</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={Boolean(deletingId)}>
-              <Trash2 className="h-4 w-4 mr-1.5" />{deletingId ? 'Đang xoá...' : 'Xoá phòng'}
+              <Trash2 className="h-4 w-4" />
+              {deletingId ? 'Đang xoá...' : 'Xoá phòng'}
             </Button>
           </DialogFooter>
         </DialogContent>

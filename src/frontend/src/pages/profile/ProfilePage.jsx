@@ -3,62 +3,84 @@ import { useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
-  Camera, KeyRound, User, Heart, AlertCircle,
-  Shield, CheckCircle2, Mail, Phone, MapPin,
-  Sparkles, Save, Eye, EyeOff, Building2,
+  AlertCircle,
+  Building2,
+  Camera,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Heart,
+  Home,
+  KeyRound,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Search,
+  Shield,
+  Sparkles,
+  User,
 } from 'lucide-react'
-import { getProfileApi, updateProfileApi, changePasswordApi } from '@/services/userService'
+import { changePasswordApi, getProfileApi, updateProfileApi } from '@/services/userService'
 import { getFavoritesApi } from '@/services/favoriteService'
 import { getRecentlyViewedApi } from '@/services/interactionService'
+import { RoomCard, RoomCardSkeleton } from '@/components/rooms/RoomCard'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { RoomCard } from '@/components/rooms/RoomCard'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
-const ROLE_LABEL  = { student: 'Sinh viên', landlord: 'Chủ trọ', admin: 'Quản trị viên' }
-const ROLE_COLOR  = { student: 'bg-blue-50 text-blue-700 border-blue-200', landlord: 'bg-amber-50 text-amber-700 border-amber-200', admin: 'bg-red-50 text-red-700 border-red-200' }
-const ROLE_ICON   = { student: User, landlord: Building2, admin: Shield }
+const ROLE_LABEL = { student: 'Sinh viên', landlord: 'Chủ trọ', admin: 'Quản trị viên' }
+const ROLE_TONE = {
+  student: 'border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
+  landlord: 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+  admin: 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+}
+const ROLE_ICON = { student: User, landlord: Building2, admin: Shield }
 
-/* ── AvatarUpload ─────────────────────────────────────────────────────────── */
 function AvatarUpload({ avatarUrl, name, onFile }) {
-  const ref = useRef(null)
+  const inputRef = useRef(null)
   const [preview, setPreview] = useState(avatarUrl || null)
+
   useEffect(() => setPreview(avatarUrl || null), [avatarUrl])
 
-  const handleChange = (e) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    if (f.size > 5 * 1024 * 1024) { toast.error('Ảnh tối đa 5MB'); return }
-    setPreview(URL.createObjectURL(f))
-    onFile(f)
+  const handleChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ảnh tối đa 5MB')
+      return
+    }
+    setPreview(URL.createObjectURL(file))
+    onFile(file)
   }
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
-        <div className="h-24 w-24 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-4 ring-background shadow-lg">
-          {preview
-            ? <img src={preview} alt="avatar" className="h-full w-full object-cover" />
-            : <span className="text-3xl font-bold text-primary">{(name || '?')[0].toUpperCase()}</span>}
+        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border bg-muted text-3xl font-bold text-primary">
+          {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : (name || '?')[0].toUpperCase()}
         </div>
-        <button type="button" onClick={() => ref.current?.click()}
-          className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 transition-all hover:scale-110">
-          <Camera className="h-3.5 w-3.5" />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border bg-background text-primary shadow-sm hover:bg-muted"
+        >
+          <Camera className="h-4 w-4" />
         </button>
-        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleChange} />
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
       </div>
-      <p className="text-[11px] text-muted-foreground">JPG, PNG · Tối đa 5MB</p>
+      <p className="text-xs text-muted-foreground">JPG, PNG · tối đa 5MB</p>
     </div>
   )
 }
 
-/* ── FieldGroup ────────────────────────────────────────────────────────────── */
-function FieldGroup({ label, icon: Icon, id, children, hint }) {
+function Field({ label, icon: Icon, id, hint, children }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="flex items-center gap-1.5 text-sm font-medium">
@@ -66,381 +88,351 @@ function FieldGroup({ label, icon: Icon, id, children, hint }) {
         {label}
       </Label>
       {children}
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
 }
 
-/* ── Loading Skeleton ─────────────────────────────────────────────────────── */
 function ProfileSkeleton() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-16 w-16 rounded-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-3.5 w-52" />
+    <div className="min-h-screen bg-muted/20">
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[300px_1fr] lg:px-8">
+        <Skeleton className="h-80 rounded-lg" />
+        <div className="space-y-4">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-96 rounded-lg" />
         </div>
       </div>
-      <Skeleton className="h-10 w-full rounded-xl" />
-      <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {[0,1,2,3].map(i => <Skeleton key={i} className="h-10 rounded-lg" />)}
-      </div>
-      <Skeleton className="h-10 w-32 rounded-lg" />
     </div>
   )
 }
 
-/* ── ProfilePage ──────────────────────────────────────────────────────────── */
+function RoomGrid({ loading, rooms, emptyTitle, emptyText }) {
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <RoomCardSkeleton key={index} />
+        ))}
+      </div>
+    )
+  }
+
+  if (!rooms.length) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <Home className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-semibold">{emptyTitle}</p>
+            <p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">{emptyText}</p>
+          </div>
+          <Button asChild variant="outline" className="rounded-lg">
+            <Link to="/search"><Search className="h-4 w-4" />Tìm phòng</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {rooms.map((room) => <RoomCard key={room._id} room={room} showViewButton={false} />)}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
-  const authUser = useSelector(s => s.auth?.user)
-  const [user, setUser]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
+  const authUser = useSelector((state) => state.auth?.user)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
-  const [form, setForm]         = useState({ name: '', phone: '', preferences: { maxPrice: '', minArea: '', district: '' } })
-  const [pwForm, setPwForm]     = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [showPw, setShowPw]     = useState({ current: false, new: false, confirm: false })
-  const [saving, setSaving]     = useState(false)
-  const [favRooms, setFavRooms]         = useState([])
-  const [loadingFavs, setLoadingFavs]   = useState(false)
-  const [recentRooms, setRecentRooms]   = useState([])
+  const [form, setForm] = useState({ name: '', phone: '', preferences: { maxPrice: '', minArea: '', district: '' } })
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false })
+  const [saving, setSaving] = useState(false)
+  const [favRooms, setFavRooms] = useState([])
+  const [loadingFavs, setLoadingFavs] = useState(false)
+  const [recentRooms, setRecentRooms] = useState([])
   const [loadingRecent, setLoadingRecent] = useState(false)
 
   useEffect(() => {
     getProfileApi()
-      .then(res => {
-        const u = res.data?.data?.user
-        if (!u) { setError('Không tải được hồ sơ'); return }
-        setUser(u)
+      .then((res) => {
+        const profile = res.data?.data?.user
+        if (!profile) {
+          setError('Không tải được hồ sơ')
+          return
+        }
+        setUser(profile)
         setForm({
-          name: u.name || '', phone: u.phone || '',
-          preferences: { maxPrice: u.preferences?.maxPrice || '', minArea: u.preferences?.minArea || '', district: u.preferences?.district || '' },
+          name: profile.name || '',
+          phone: profile.phone || '',
+          preferences: {
+            maxPrice: profile.preferences?.maxPrice || '',
+            minArea: profile.preferences?.minArea || '',
+            district: profile.preferences?.district || '',
+          },
         })
       })
-      .catch(err => {
-        const msg = err.response?.status === 401 ? 'Phiên đăng nhập đã hết hạn.' : 'Không thể tải hồ sơ.'
-        setError(msg); toast.error(msg)
+      .catch((err) => {
+        const message = err.response?.status === 401 ? 'Phiên đăng nhập đã hết hạn.' : 'Không thể tải hồ sơ.'
+        setError(message)
+        toast.error(message)
       })
       .finally(() => setLoading(false))
   }, [])
 
   const loadFavs = () => {
-    if (loadingFavs) return
+    if (loadingFavs || favRooms.length) return
     setLoadingFavs(true)
     getFavoritesApi()
-      .then(res => setFavRooms(res.data?.data?.rooms || []))
+      .then((res) => setFavRooms(res.data?.data?.rooms || []))
       .catch(() => toast.error('Không thể tải yêu thích'))
       .finally(() => setLoadingFavs(false))
   }
 
   const loadRecent = () => {
-    if (loadingRecent) return
+    if (loadingRecent || recentRooms.length) return
     setLoadingRecent(true)
     getRecentlyViewedApi(10)
-      .then(res => setRecentRooms(res.data?.data?.rooms || []))
+      .then((res) => setRecentRooms(res.data?.data?.rooms || []))
       .catch(() => toast.error('Không thể tải lịch sử xem'))
       .finally(() => setLoadingRecent(false))
   }
 
-  const handleSave = async (e) => {
-    e.preventDefault()
-    if (!form.name.trim()) { toast.error('Tên không được để trống'); return }
+  const handleSave = async (event) => {
+    event.preventDefault()
+    if (!form.name.trim()) {
+      toast.error('Tên không được để trống')
+      return
+    }
     setSaving(true)
     try {
-      const fd = new FormData()
-      fd.append('name', form.name.trim())
-      fd.append('phone', form.phone.trim())
-      fd.append('preferences', JSON.stringify({
+      const payload = new FormData()
+      payload.append('name', form.name.trim())
+      payload.append('phone', form.phone.trim())
+      payload.append('preferences', JSON.stringify({
         maxPrice: Number(form.preferences.maxPrice) || null,
-        minArea:  Number(form.preferences.minArea) || null,
+        minArea: Number(form.preferences.minArea) || null,
         district: form.preferences.district.trim() || null,
       }))
-      if (avatarFile) fd.append('avatar', avatarFile)
-      const res = await updateProfileApi(fd)
+      if (avatarFile) payload.append('avatar', avatarFile)
+      const res = await updateProfileApi(payload)
       const updated = res.data?.data?.user
       if (updated) {
         setUser(updated)
-        setForm({ name: updated.name || '', phone: updated.phone || '', preferences: { maxPrice: updated.preferences?.maxPrice || '', minArea: updated.preferences?.minArea || '', district: updated.preferences?.district || '' } })
+        setForm({
+          name: updated.name || '',
+          phone: updated.phone || '',
+          preferences: {
+            maxPrice: updated.preferences?.maxPrice || '',
+            minArea: updated.preferences?.minArea || '',
+            district: updated.preferences?.district || '',
+          },
+        })
       }
       setAvatarFile(null)
-      toast.success('Cập nhật hồ sơ thành công!')
-    } catch (err) { toast.error(err.response?.data?.message || 'Lỗi cập nhật') }
-    finally { setSaving(false) }
+      toast.success('Cập nhật hồ sơ thành công')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Lỗi cập nhật')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleChangePw = async (e) => {
-    e.preventDefault()
-    if (!pwForm.currentPassword || !pwForm.newPassword) { toast.error('Vui lòng điền đầy đủ'); return }
-    if (pwForm.newPassword !== pwForm.confirmPassword) { toast.error('Mật khẩu mới không khớp'); return }
-    if (pwForm.newPassword.length < 6) { toast.error('Mật khẩu ít nhất 6 ký tự'); return }
+  const handleChangePassword = async (event) => {
+    event.preventDefault()
+    if (!pwForm.currentPassword || !pwForm.newPassword) {
+      toast.error('Vui lòng điền đầy đủ')
+      return
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error('Mật khẩu mới không khớp')
+      return
+    }
+    if (pwForm.newPassword.length < 6) {
+      toast.error('Mật khẩu ít nhất 6 ký tự')
+      return
+    }
     setSaving(true)
     try {
       await changePasswordApi({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword })
-      toast.success('Đổi mật khẩu thành công!')
+      toast.success('Đổi mật khẩu thành công')
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-    } catch (err) { toast.error(err.response?.data?.message || 'Mật khẩu hiện tại không đúng') }
-    finally { setSaving(false) }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Mật khẩu hiện tại không đúng')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <ProfileSkeleton />
 
-  if (error || !user) return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center px-4">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-        <AlertCircle className="h-8 w-8 text-destructive" />
+  if (error || !user) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+          <AlertCircle className="h-7 w-7" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Không thể tải hồ sơ</h2>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">{error || 'Phiên đăng nhập có thể đã hết hạn.'}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.location.reload()}>Thử lại</Button>
+          <Button asChild><Link to="/login">Đăng nhập lại</Link></Button>
+        </div>
       </div>
-      <h2 className="font-semibold">Không thể tải hồ sơ</h2>
-      <p className="text-sm text-muted-foreground max-w-xs">{error || 'Phiên đăng nhập có thể đã hết hạn.'}</p>
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={() => window.location.reload()}>Thử lại</Button>
-        <Button asChild><Link to="/login">Đăng nhập lại</Link></Button>
-      </div>
-    </div>
-  )
+    )
+  }
 
   const RoleIcon = ROLE_ICON[user.role] || User
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
-
-      {/* ── Profile hero card ─────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background p-5">
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/5" />
-        <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-primary/5" />
-        <div className="relative flex items-center gap-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-background shadow-md">
-            {user.avatar
-              ? <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
-              : <span className="text-2xl font-bold text-primary">{(user.name || '?')[0].toUpperCase()}</span>}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold truncate">{user.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium', ROLE_COLOR[user.role] || '')}>
-                <RoleIcon className="h-3 w-3" />
-                {ROLE_LABEL[user.role] || user.role}
-              </span>
-              {user.isEmailVerified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" />Đã xác minh
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground truncate">{user.email}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tabs ──────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="info" onValueChange={v => {
-        if (v === 'favorites') loadFavs()
-        if (v === 'recent') loadRecent()
-      }}>
-        <TabsList className="w-full grid grid-cols-4 h-10 rounded-xl">
-          <TabsTrigger value="info" className="rounded-lg gap-1.5 text-xs sm:text-sm">
-            <User className="h-3.5 w-3.5" />Thông tin
-          </TabsTrigger>
-          <TabsTrigger value="favorites" className="rounded-lg gap-1.5 text-xs sm:text-sm">
-            <Heart className="h-3.5 w-3.5" />Yêu thích
-          </TabsTrigger>
-          <TabsTrigger value="recent" className="rounded-lg gap-1.5 text-xs sm:text-sm">
-            <Eye className="h-3.5 w-3.5" />Đã xem
-          </TabsTrigger>
-          <TabsTrigger value="security" className="rounded-lg gap-1.5 text-xs sm:text-sm">
-            <KeyRound className="h-3.5 w-3.5" />Bảo mật
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ── Tab Thông tin ── */}
-        <TabsContent value="info" className="mt-4">
-          <form onSubmit={handleSave} className="space-y-6">
-
-            {/* Avatar */}
-            <div className="rounded-2xl border bg-card p-5 flex flex-col sm:flex-row items-center gap-5">
+    <div className="min-h-screen bg-muted/20">
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[300px_1fr] lg:px-8">
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 p-5 text-center">
               <AvatarUpload avatarUrl={user.avatar} name={user.name} onFile={setAvatarFile} />
-              <div className="text-center sm:text-left">
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Tham gia: {new Date(user.createdAt).toLocaleDateString('vi-VN')}
-                </p>
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-bold">{user.name}</h1>
+                <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
               </div>
-            </div>
-
-            {/* Thông tin cơ bản */}
-            <div className="rounded-2xl border bg-card p-5 space-y-4">
-              <h2 className="font-semibold text-sm">Thông tin cơ bản</h2>
-              <Separator />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FieldGroup label="Họ và tên" icon={User} id="pf-name">
-                  <Input id="pf-name" value={form.name}
-                    onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="Nguyễn Văn A" className="rounded-lg" />
-                </FieldGroup>
-                <FieldGroup label="Số điện thoại" icon={Phone} id="pf-phone">
-                  <Input id="pf-phone" value={form.phone}
-                    onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                    placeholder="0901 234 567" className="rounded-lg" />
-                </FieldGroup>
-              </div>
-              <FieldGroup label="Email" icon={Mail} id="pf-email" hint="Email không thể thay đổi">
-                <Input id="pf-email" value={user.email} disabled className="rounded-lg opacity-60 cursor-not-allowed" />
-              </FieldGroup>
-            </div>
-
-            {/* Sở thích AI */}
-            <div className="rounded-2xl border bg-card p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-sm">Sở thích tìm phòng</h2>
-                  <p className="text-xs text-muted-foreground">Giúp AI gợi ý phòng phù hợp hơn</p>
-                </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Badge variant="outline" className={cn('border', ROLE_TONE[user.role])}>
+                  <RoleIcon className="mr-1 h-3.5 w-3.5" />
+                  {ROLE_LABEL[user.role] || user.role}
+                </Badge>
+                {user.isEmailVerified && (
+                  <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                    Đã xác minh
+                  </Badge>
+                )}
               </div>
               <Separator />
-              <div className="grid gap-4 sm:grid-cols-3">
-                <FieldGroup label="Giá tối đa (VNĐ)" id="pf-maxprice">
-                  <Input id="pf-maxprice" type="number" min={0} placeholder="3,000,000"
-                    value={form.preferences.maxPrice}
-                    onChange={e => setForm(p => ({ ...p, preferences: { ...p.preferences, maxPrice: e.target.value } }))}
-                    className="rounded-lg" />
-                </FieldGroup>
-                <FieldGroup label="Diện tích tối thiểu (m²)" id="pf-minarea">
-                  <Input id="pf-minarea" type="number" min={0} placeholder="15"
-                    value={form.preferences.minArea}
-                    onChange={e => setForm(p => ({ ...p, preferences: { ...p.preferences, minArea: e.target.value } }))}
-                    className="rounded-lg" />
-                </FieldGroup>
-                <FieldGroup label="Khu vực ưa thích" icon={MapPin} id="pf-district">
-                  <Input id="pf-district" placeholder="Phường 1, Vĩnh Long"
-                    value={form.preferences.district}
-                    onChange={e => setForm(p => ({ ...p, preferences: { ...p.preferences, district: e.target.value } }))}
-                    className="rounded-lg" />
-                </FieldGroup>
+              <div className="grid w-full gap-2 text-left text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4" /><span className="truncate">{user.email}</span></div>
+                {user.phone && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" /><span>{user.phone}</span></div>}
+                <div className="flex items-center gap-2 text-muted-foreground"><User className="h-4 w-4" /><span>Tham gia {new Date(user.createdAt).toLocaleDateString('vi-VN')}</span></div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </aside>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={saving} className="gap-2 rounded-xl px-6">
-                <Save className="h-4 w-4" />
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </Button>
-            </div>
-          </form>
-        </TabsContent>
+        <main className="min-w-0">
+          <Tabs defaultValue="info" onValueChange={(value) => {
+            if (value === 'favorites') loadFavs()
+            if (value === 'recent') loadRecent()
+          }}>
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg p-1 sm:grid-cols-4">
+              <TabsTrigger value="info" className="rounded-md"><User className="mr-1.5 h-3.5 w-3.5" />Thông tin</TabsTrigger>
+              <TabsTrigger value="favorites" className="rounded-md"><Heart className="mr-1.5 h-3.5 w-3.5" />Yêu thích</TabsTrigger>
+              <TabsTrigger value="recent" className="rounded-md"><Eye className="mr-1.5 h-3.5 w-3.5" />Đã xem</TabsTrigger>
+              <TabsTrigger value="security" className="rounded-md"><KeyRound className="mr-1.5 h-3.5 w-3.5" />Bảo mật</TabsTrigger>
+            </TabsList>
 
-        {/* ── Tab Yêu thích ── */}
-        <TabsContent value="favorites" className="mt-4">
-          {loadingFavs ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[0,1,2,3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
-            </div>
-          ) : favRooms.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-16 text-center rounded-2xl border bg-card">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
-                <Heart className="h-8 w-8 text-red-300" />
-              </div>
-              <div>
-                <p className="font-semibold">Chưa có phòng yêu thích</p>
-                <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-                  Bấm ❤️ trên trang chi tiết phòng để lưu vào đây
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm" className="rounded-full gap-1.5">
-                <Link to="/search"><Heart className="h-3.5 w-3.5" />Tìm phòng ngay</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{favRooms.length} phòng đã lưu</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {favRooms.map(room => <RoomCard key={room._id} room={room} />)}
-              </div>
-            </div>
-          )}
-        </TabsContent>
+            <TabsContent value="info" className="mt-5">
+              <form onSubmit={handleSave} className="space-y-5">
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Thông tin cá nhân</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Họ và tên" icon={User} id="profile-name">
+                        <Input id="profile-name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} />
+                      </Field>
+                      <Field label="Số điện thoại" icon={Phone} id="profile-phone">
+                        <Input id="profile-phone" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} placeholder="0901 234 567" />
+                      </Field>
+                    </div>
+                    <Field label="Email" icon={Mail} id="profile-email" hint="Email không thể thay đổi">
+                      <Input id="profile-email" value={user.email} disabled className="opacity-70" />
+                    </Field>
+                  </CardContent>
+                </Card>
 
-        {/* ── Tab Đã xem ── */}
-        <TabsContent value="recent" className="mt-4">
-          {loadingRecent ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[0,1,2,3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
-            </div>
-          ) : recentRooms.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-16 text-center rounded-2xl border bg-card">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                <Eye className="h-8 w-8 text-muted-foreground/40" />
-              </div>
-              <div>
-                <p className="font-semibold">Chưa xem phòng nào</p>
-                <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-                  Khi bạn xem chi tiết phòng, chúng sẽ hiển thị ở đây
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm" className="rounded-full gap-1.5">
-                <Link to="/search"><Eye className="h-3.5 w-3.5" />Tìm phòng ngay</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{recentRooms.length} phòng đã xem gần đây</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {recentRooms.map(room => <RoomCard key={room._id} room={room} />)}
-              </div>
-            </div>
-          )}
-        </TabsContent>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      Sở thích tìm phòng
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Giá tối đa" id="pref-price">
+                      <Input id="pref-price" type="number" min="0" value={form.preferences.maxPrice} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, maxPrice: event.target.value } }))} placeholder="3000000" />
+                    </Field>
+                    <Field label="Diện tích tối thiểu" id="pref-area">
+                      <Input id="pref-area" type="number" min="0" value={form.preferences.minArea} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, minArea: event.target.value } }))} placeholder="15" />
+                    </Field>
+                    <Field label="Khu vực ưu tiên" icon={MapPin} id="pref-district">
+                      <Input id="pref-district" value={form.preferences.district} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, district: event.target.value } }))} placeholder="Vĩnh Long" />
+                    </Field>
+                  </CardContent>
+                </Card>
 
-        {/* ── Tab Bảo mật ── */}
-        <TabsContent value="security" className="mt-4">
-          <div className="rounded-2xl border bg-card p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <KeyRound className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-sm">Đổi mật khẩu</h2>
-                <p className="text-xs text-muted-foreground">Mật khẩu mới phải ít nhất 6 ký tự</p>
-              </div>
-            </div>
-            <Separator />
-            <form onSubmit={handleChangePw} className="space-y-4 max-w-sm">
-              {[
-                { id: 'cur-pw', label: 'Mật khẩu hiện tại', key: 'currentPassword', ac: 'current-password', showKey: 'current' },
-                { id: 'new-pw', label: 'Mật khẩu mới', key: 'newPassword', ac: 'new-password', showKey: 'new' },
-                { id: 'con-pw', label: 'Xác nhận mật khẩu mới', key: 'confirmPassword', ac: 'new-password', showKey: 'confirm' },
-              ].map(({ id, label, key, ac, showKey }) => (
-                <div key={id} className="space-y-1.5">
-                  <Label htmlFor={id} className="text-sm">{label}</Label>
-                  <div className="relative">
-                    <Input
-                      id={id}
-                      type={showPw[showKey] ? 'text' : 'password'}
-                      autoComplete={ac}
-                      value={pwForm[key]}
-                      onChange={e => setPwForm(p => ({ ...p, [key]: e.target.value }))}
-                      className="rounded-lg pr-9"
-                    />
-                    <button type="button"
-                      onClick={() => setShowPw(p => ({ ...p, [showKey]: !p[showKey] }))}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPw[showKey] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={saving} className="rounded-lg">
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </Button>
                 </div>
-              ))}
-              <Button type="submit" disabled={saving} className="gap-2 rounded-xl">
-                <Shield className="h-4 w-4" />
-                {saving ? 'Đang lưu...' : 'Đổi mật khẩu'}
-              </Button>
-            </form>
-          </div>
-        </TabsContent>
-      </Tabs>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="favorites" className="mt-5">
+              <RoomGrid loading={loadingFavs} rooms={favRooms} emptyTitle="Chưa có phòng yêu thích" emptyText="Nhấn trái tim ở trang chi tiết phòng để lưu vào đây." />
+            </TabsContent>
+
+            <TabsContent value="recent" className="mt-5">
+              <RoomGrid loading={loadingRecent} rooms={recentRooms} emptyTitle="Chưa xem phòng nào" emptyText="Các phòng bạn đã xem sẽ xuất hiện ở đây để quay lại nhanh hơn." />
+            </TabsContent>
+
+            <TabsContent value="security" className="mt-5">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg"><KeyRound className="h-5 w-5 text-primary" />Đổi mật khẩu</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleChangePassword} className="max-w-md space-y-4">
+                    {[
+                      { id: 'current-password', label: 'Mật khẩu hiện tại', key: 'currentPassword', showKey: 'current', ac: 'current-password' },
+                      { id: 'new-password', label: 'Mật khẩu mới', key: 'newPassword', showKey: 'new', ac: 'new-password' },
+                      { id: 'confirm-password', label: 'Xác nhận mật khẩu mới', key: 'confirmPassword', showKey: 'confirm', ac: 'new-password' },
+                    ].map((item) => (
+                      <div key={item.id} className="space-y-1.5">
+                        <Label htmlFor={item.id}>{item.label}</Label>
+                        <div className="relative">
+                          <Input
+                            id={item.id}
+                            type={showPw[item.showKey] ? 'text' : 'password'}
+                            autoComplete={item.ac}
+                            value={pwForm[item.key]}
+                            onChange={(event) => setPwForm((prev) => ({ ...prev, [item.key]: event.target.value }))}
+                            className="pr-10"
+                          />
+                          <button type="button" onClick={() => setShowPw((prev) => ({ ...prev, [item.showKey]: !prev[item.showKey] }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showPw[item.showKey] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button type="submit" disabled={saving} className="rounded-lg">
+                      <Shield className="h-4 w-4" />
+                      {saving ? 'Đang lưu...' : 'Đổi mật khẩu'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
     </div>
   )
 }

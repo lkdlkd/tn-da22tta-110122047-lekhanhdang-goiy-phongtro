@@ -9,9 +9,17 @@ import { registerApi } from '@/services/authService'
 import { loginSuccess } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Eye, EyeOff, Home, GraduationCap, Building2, Mail } from 'lucide-react'
+import { CardContent, CardFooter } from '@/components/ui/card'
+import { Building2, GraduationCap, Mail, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  AuthCard,
+  AuthShell,
+  AuthStatusCard,
+  FormField,
+  PasswordField,
+  SubmitButton,
+} from '@/pages/auth/components/AuthLayout'
+import { cn } from '@/lib/utils'
 
 const schema = yup.object({
   name: yup.string().min(2, 'Tên tối thiểu 2 ký tự').required('Vui lòng nhập họ tên'),
@@ -23,6 +31,26 @@ const schema = yup.object({
     .required('Vui lòng xác nhận mật khẩu'),
   role: yup.string().oneOf(['student', 'landlord']).required('Vui lòng chọn loại tài khoản'),
 })
+
+function RoleOption({ active, icon: Icon, title, description, onClick, id }) {
+  return (
+    <button
+      type="button"
+      id={id}
+      onClick={onClick}
+      className={cn(
+        'flex min-h-28 flex-col items-start gap-2 rounded-lg border p-4 text-left transition-all',
+        active
+          ? 'border-primary bg-primary/10 text-primary shadow-sm'
+          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/40'
+      )}
+    >
+      <Icon className="h-5 w-5" />
+      <span className="text-sm font-semibold">{title}</span>
+      <span className="text-xs leading-relaxed text-muted-foreground">{description}</span>
+    </button>
+  )
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -48,20 +76,17 @@ export default function RegisterPage() {
     try {
       const res = await registerApi(data)
 
-      // Sinh viên: backend trả về token → đăng nhập luôn
       if (res.data.data?.token) {
         dispatch(loginSuccess(res.data.data))
-        toast.success('Đăng ký thành công! Chào mừng bạn 🎉')
+        toast.success('Đăng ký thành công! Chào mừng bạn')
         navigate('/')
         return
       }
 
-      // Chủ trọ: backend yêu cầu xác minh email
       if (res.data.data?.requireEmailVerification) {
         setPendingEmail(data.email)
         setLandlordVerifyPending(true)
-        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản 📧')
-        return
+        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản')
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Đăng ký thất bại'
@@ -70,155 +95,124 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <Home className="h-8 w-8" />
-            <span>PhòngTrọ VL</span>
-          </Link>
-        </div>
-
-        {/* Màn hình chờ xác thực email — chỉ hiện cho chủ trọ sau khi đăng ký */}
-        {landlordVerifyPending ? (
-          <Card className="shadow-sm">
-            <CardContent className="text-center space-y-5 py-10">
-              <div className="flex justify-center">
-                <div className="p-4 rounded-full bg-primary/10">
-                  <Mail className="h-10 w-10 text-primary" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold">Kiểm tra email của bạn</h2>
-                <p className="text-sm text-muted-foreground">
-                  Chúng tôi đã gửi link xác thực đến
-                </p>
-                <p className="font-medium text-primary">{pendingEmail}</p>
-                <p className="text-sm text-muted-foreground">
-                  Vui lòng click vào link trong email để kích hoạt tài khoản Chủ trọ.<br />
-                  Link có hiệu lực trong <strong>24 giờ</strong>.
-                </p>
-              </div>
-              <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
-                Không thấy email? Kiểm tra thư mục <strong>Spam / Junk</strong>
-              </div>
-              <Button variant="outline" asChild className="w-full">
-                <Link to="/login">Quay lại đăng nhập</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-        <Card className="shadow-sm">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl">Tạo tài khoản</CardTitle>
-            <CardDescription>Đăng ký để bắt đầu tìm phòng trọ phù hợp</CardDescription>
-          </CardHeader>
-
+    <AuthShell
+      title="Tạo tài khoản"
+      description="Chọn vai trò phù hợp để bắt đầu tìm phòng hoặc quản lý tin đăng."
+      asideTitle="Bắt đầu với tài khoản phù hợp cho nhu cầu của bạn."
+      asideDescription="Sinh viên có thể lưu phòng và đặt lịch xem. Chủ trọ có thể đăng tin, quản lý lịch hẹn và trao đổi với người thuê."
+      asideItems={[
+        { icon: GraduationCap, title: 'Người thuê', desc: 'Tìm phòng, lưu tin và đặt lịch nhanh.' },
+        { icon: Building2, title: 'Chủ trọ', desc: 'Đăng phòng và quản lý khách liên hệ.' },
+        { icon: MessageCircle, title: 'Trao đổi', desc: 'Chat trực tiếp trong hệ thống.' },
+      ]}
+      footerPrompt="Đã có tài khoản?"
+      footerLinkText="Đăng nhập"
+      footerLinkTo="/login"
+      className="items-start pt-4 sm:pt-8 lg:items-center lg:pt-2"
+    >
+      {landlordVerifyPending ? (
+        <AuthStatusCard
+          icon={Mail}
+          tone="primary"
+          title="Kiểm tra email của bạn"
+          description="Chúng tôi đã gửi liên kết xác thực để kích hoạt tài khoản chủ trọ."
+        >
+          <div className="rounded-lg border bg-muted/40 p-4 text-left">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Email nhận xác thực</p>
+            <p className="mt-1 break-all text-sm font-semibold text-foreground">{pendingEmail}</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Liên kết có hiệu lực trong 24 giờ. Nếu không thấy email, vui lòng kiểm tra thư mục Spam hoặc Junk.
+            </p>
+          </div>
+          <Button variant="outline" asChild className="h-11 w-full rounded-lg">
+            <Link to="/login">Quay lại đăng nhập</Link>
+          </Button>
+        </AuthStatusCard>
+      ) : (
+        <AuthCard
+          icon={ShieldCheck}
+          title="Tạo tài khoản"
+          description="Thông tin này giúp hệ thống cá nhân hóa trải nghiệm và bảo vệ tài khoản của bạn."
+        >
           <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              {/* Role Selection */}
+            <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label>Bạn là</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
+                <p className="text-sm font-medium">Bạn tham gia với vai trò</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <RoleOption
                     id="role-student"
-                    onClick={() => setValue('role', 'student')}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                      selectedRole === 'student'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <GraduationCap className="h-6 w-6" />
-                    <span className="text-sm font-medium">Sinh viên</span>
-                    <span className="text-xs text-muted-foreground">Đăng nhập ngay</span>
-                  </button>
-                  <button
-                    type="button"
+                    active={selectedRole === 'student'}
+                    icon={GraduationCap}
+                    title="Sinh viên / Người thuê"
+                    description="Tìm phòng, lưu tin yêu thích và đặt lịch xem phòng."
+                    onClick={() => setValue('role', 'student', { shouldValidate: true })}
+                  />
+                  <RoleOption
                     id="role-landlord"
-                    onClick={() => setValue('role', 'landlord')}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                      selectedRole === 'landlord'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <Building2 className="h-6 w-6" />
-                    <span className="text-sm font-medium">Chủ trọ</span>
-                    <span className="text-xs text-muted-foreground">Cần xác minh email</span>
-                  </button>
+                    active={selectedRole === 'landlord'}
+                    icon={Building2}
+                    title="Chủ trọ"
+                    description="Đăng tin và quản lý phòng cho thuê."
+                    onClick={() => setValue('role', 'landlord', { shouldValidate: true })}
+                  />
                 </div>
                 {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
               </div>
 
+              <FormField id="register-name" label="Họ và tên" error={errors.name?.message}>
+                <Input
+                  id="register-name"
+                  autoComplete="name"
+                  placeholder="Nguyễn Văn A"
+                  className="h-11 rounded-lg"
+                  {...register('name')}
+                />
+              </FormField>
 
-              <div className="space-y-2">
-                <Label htmlFor="register-name">Họ và tên</Label>
-                <Input id="register-name" placeholder="Nguyễn Văn A" {...register('name')} />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-              </div>
+              <FormField id="register-email" label="Email" error={errors.email?.message}>
+                <Input
+                  id="register-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="example@email.com"
+                  className="h-11 rounded-lg"
+                  {...register('email')}
+                />
+              </FormField>
 
-              <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
-                <Input id="register-email" type="email" placeholder="example@email.com" {...register('email')} />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
+              <PasswordField
+                id="register-password"
+                label="Mật khẩu"
+                autoComplete="new-password"
+                register={register('password')}
+                error={errors.password?.message}
+                show={showPassword}
+                onToggle={() => setShowPassword((value) => !value)}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="register-password">Mật khẩu</Label>
-                <div className="relative">
-                  <Input
-                    id="register-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...register('password')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="register-confirm-password">Xác nhận mật khẩu</Label>
+              <FormField id="register-confirm-password" label="Xác nhận mật khẩu" error={errors.confirmPassword?.message}>
                 <Input
                   id="register-confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
+                  className="h-11 rounded-lg"
                   {...register('confirmPassword')}
                 />
-                {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-                )}
-              </div>
+              </FormField>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-4">
-              <Button
-                id="btn-register-submit"
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Đang tạo tài khoản...' : 'Đăng ký'}
-              </Button>
-              <p className="text-sm text-center text-muted-foreground">
-                Đã có tài khoản?{' '}
-                <Link to="/login" className="text-primary font-medium hover:underline">
-                  Đăng nhập
-                </Link>
+            <CardFooter className="flex flex-col gap-4">
+              <SubmitButton id="btn-register-submit" loading={isSubmitting} loadingText="Đang tạo tài khoản...">
+                Đăng ký
+              </SubmitButton>
+              <p className="text-center text-sm text-muted-foreground">
+                Chủ trọ cần xác thực email trước khi đăng tin.
               </p>
             </CardFooter>
           </form>
-        </Card>
-        )}
-      </div>
-    </div>
+        </AuthCard>
+      )}
+    </AuthShell>
   )
 }

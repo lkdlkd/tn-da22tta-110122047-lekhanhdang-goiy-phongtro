@@ -7,16 +7,22 @@ import { toast } from 'sonner'
 import { forgotPasswordApi } from '@/services/authService'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Home, ArrowLeft, Mail } from 'lucide-react'
+import { CardContent, CardFooter } from '@/components/ui/card'
+import { ArrowLeft, Mail, ShieldCheck, TimerReset } from 'lucide-react'
+import {
+  AuthCard,
+  AuthShell,
+  AuthStatusCard,
+  FormField,
+  SubmitButton,
+} from '@/pages/auth/components/AuthLayout'
 
 const schema = yup.object({
   email: yup.string().email('Email không hợp lệ').required('Vui lòng nhập email'),
 })
 
 export default function ForgotPasswordPage() {
-  const [sent, setSent] = useState(false)
+  const [sentEmail, setSentEmail] = useState('')
 
   const {
     register,
@@ -27,8 +33,8 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data) => {
     try {
       await forgotPasswordApi(data.email)
-      setSent(true)
-      toast.success('Email reset mật khẩu đã được gửi!')
+      setSentEmail(data.email)
+      toast.success('Email đặt lại mật khẩu đã được gửi')
     } catch (err) {
       const message = err.response?.data?.message || 'Gửi email thất bại'
       toast.error(message)
@@ -36,65 +42,72 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <Home className="h-8 w-8" />
-            <span>PhòngTrọ VL</span>
-          </Link>
-        </div>
+    <AuthShell
+      title="Khôi phục mật khẩu"
+      description="Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu."
+      asideTitle="Lấy lại quyền truy cập tài khoản một cách an toàn."
+      asideDescription="Chúng tôi chỉ gửi liên kết khôi phục tới email đã đăng ký. Sau khi đổi mật khẩu, bạn có thể tiếp tục quản lý phòng, lịch hẹn và tin nhắn."
+      asideItems={[
+        { icon: Mail, title: 'Gửi qua email', desc: 'Liên kết khôi phục được gửi đến hộp thư của bạn.' },
+        { icon: TimerReset, title: 'Có thời hạn', desc: 'Sử dụng liên kết sớm để đảm bảo bảo mật.' },
+        { icon: ShieldCheck, title: 'Bảo vệ tài khoản', desc: 'Đặt mật khẩu mới trước khi đăng nhập lại.' },
+      ]}
+      footerPrompt="Nhớ mật khẩu?"
+      footerLinkText="Đăng nhập"
+      footerLinkTo="/login"
+    >
+      {sentEmail ? (
+        <AuthStatusCard
+          icon={Mail}
+          tone="success"
+          title="Kiểm tra email của bạn"
+          description="Liên kết đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra cả hộp thư Spam hoặc Junk nếu chưa thấy email."
+        >
+          <div className="rounded-lg border bg-muted/40 p-4 text-left">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Email nhận liên kết</p>
+            <p className="mt-1 break-all text-sm font-semibold text-foreground">{sentEmail}</p>
+          </div>
+          <Button variant="outline" asChild className="h-11 w-full rounded-lg">
+            <Link to="/login">
+              <ArrowLeft className="h-4 w-4" />
+              Quay lại đăng nhập
+            </Link>
+          </Button>
+        </AuthStatusCard>
+      ) : (
+        <AuthCard
+          icon={Mail}
+          title="Quên mật khẩu"
+          description="Nhập email tài khoản. Hệ thống sẽ gửi liên kết để bạn tạo mật khẩu mới."
+        >
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <CardContent className="space-y-5">
+              <FormField id="forgot-email" label="Email" error={errors.email?.message}>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="example@email.com"
+                  className="h-11 rounded-lg"
+                  {...register('email')}
+                />
+              </FormField>
+            </CardContent>
 
-        <Card className="shadow-sm">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-2">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Mail className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl">Quên mật khẩu</CardTitle>
-            <CardDescription>
-              Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu
-            </CardDescription>
-          </CardHeader>
-
-          {sent ? (
-            <CardContent className="text-center space-y-4 py-8">
-              <div className="text-5xl">📧</div>
-              <p className="text-muted-foreground">
-                Email reset mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn (kể cả thư mục spam).
-              </p>
-              <Button variant="outline" asChild className="w-full">
+            <CardFooter className="flex flex-col gap-3">
+              <SubmitButton id="btn-forgot-submit" loading={isSubmitting} loadingText="Đang gửi...">
+                Gửi email đặt lại mật khẩu
+              </SubmitButton>
+              <Button variant="ghost" asChild className="h-11 w-full rounded-lg">
                 <Link to="/login">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Quay về đăng nhập
+                  <ArrowLeft className="h-4 w-4" />
+                  Quay lại đăng nhập
                 </Link>
               </Button>
-            </CardContent>
-          ) : (
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="forgot-email">Email</Label>
-                  <Input id="forgot-email" type="email" placeholder="example@email.com" {...register('email')} />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-3">
-                <Button id="btn-forgot-submit" type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? 'Đang gửi...' : 'Gửi email đặt lại mật khẩu'}
-                </Button>
-                <Button variant="ghost" asChild className="w-full">
-                  <Link to="/login">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Quay lại đăng nhập
-                  </Link>
-                </Button>
-              </CardFooter>
-            </form>
-          )}
-        </Card>
-      </div>
-    </div>
+            </CardFooter>
+          </form>
+        </AuthCard>
+      )}
+    </AuthShell>
   )
 }

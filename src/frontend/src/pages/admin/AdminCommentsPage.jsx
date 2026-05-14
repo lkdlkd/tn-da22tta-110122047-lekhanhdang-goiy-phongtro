@@ -1,77 +1,57 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import {
-  CheckCircle, XCircle, RefreshCw,
-  MessageSquare, ChevronLeft, ChevronRight, ExternalLink, Trash2,
-} from 'lucide-react'
+import { CheckCircle, ExternalLink, MessageSquare, Trash2, XCircle } from 'lucide-react'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/vi'
 import {
-  adminGetCommentsApi, adminApproveCommentApi,
-  adminRejectCommentApi, adminDeleteCommentApi,
+  adminApproveCommentApi,
+  adminDeleteCommentApi,
+  adminGetCommentsApi,
+  adminRejectCommentApi,
 } from '@/services/commentService'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { AdminContent, AdminEmptyState, AdminPageHeader, AdminPagination, AdminTabs } from '@/pages/admin/components/AdminUI'
 
 dayjs.extend(relativeTime)
 dayjs.locale('vi')
 
 const STATUS_CFG = {
-  pending:  { label: 'Chờ duyệt', cls: 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-  approved: { label: 'Đã duyệt',  cls: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
-  rejected: { label: 'Từ chối',   cls: 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
+  pending: { label: 'Chờ duyệt', cls: 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
+  approved: { label: 'Đã duyệt', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' },
+  rejected: { label: 'Từ chối', cls: 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300' },
 }
 
 const STATUS_TABS = [
-  { value: 'pending',  label: 'Chờ duyệt' },
+  { value: 'pending', label: 'Chờ duyệt' },
   { value: 'approved', label: 'Đã duyệt' },
   { value: 'rejected', label: 'Từ chối' },
-  { value: '',         label: 'Tất cả' },
+  { value: '', label: 'Tất cả' },
 ]
 
-function Pagination({ page, totalPages, total, onChange }) {
-  if (totalPages <= 1) return null
-  return (
-    <div className="flex items-center justify-between pt-2">
-      <p className="text-xs text-muted-foreground">{total} bình luận · Trang {page}/{totalPages}</p>
-      <div className="flex gap-1">
-        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 export default function AdminCommentsPage() {
-  const [comments, setComments]         = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [status, setStatus]             = useState('pending')
-  const [page, setPage]                 = useState(1)
-  const [pagination, setPagination]     = useState({})
-  const [actionId, setActionId]         = useState('')
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState('pending')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
+  const [actionId, setActionId] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const fetchComments = useCallback(async () => {
+    setLoading(true)
     try {
-      setLoading(true)
       const params = { page, limit: 15 }
       if (status) params.status = status
       const res = await adminGetCommentsApi(params)
       setComments(res.data?.data?.comments || [])
-      setPagination(res.data?.data?.pagination || {})
+      setPagination(res.data?.data?.pagination || { total: 0, totalPages: 1 })
     } catch {
       toast.error('Không thể tải danh sách bình luận')
     } finally {
@@ -81,192 +61,163 @@ export default function AdminCommentsPage() {
 
   useEffect(() => { fetchComments() }, [fetchComments])
 
-  const handleStatusChange = (val) => {
-    setStatus(val)
+  const handleStatusChange = (value) => {
+    setStatus(value)
     setPage(1)
   }
 
   const handleApprove = async (id) => {
+    setActionId(id)
     try {
-      setActionId(id)
       await adminApproveCommentApi(id)
       toast.success('Đã duyệt bình luận')
       fetchComments()
-    } catch { toast.error('Thao tác thất bại') } finally { setActionId('') }
+    } catch {
+      toast.error('Thao tác thất bại')
+    } finally {
+      setActionId('')
+    }
   }
 
   const handleReject = async (id) => {
+    setActionId(id)
     try {
-      setActionId(id)
       await adminRejectCommentApi(id)
       toast.success('Đã từ chối bình luận')
       fetchComments()
-    } catch { toast.error('Thao tác thất bại') } finally { setActionId('') }
+    } catch {
+      toast.error('Thao tác thất bại')
+    } finally {
+      setActionId('')
+    }
   }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
+    setActionId(deleteTarget._id)
     try {
-      setActionId(deleteTarget._id)
       await adminDeleteCommentApi(deleteTarget._id)
-      toast.success('Đã xoá bình luận')
+      toast.success('Đã xóa bình luận')
       setDeleteTarget(null)
       fetchComments()
-    } catch { toast.error('Xoá thất bại') } finally { setActionId('') }
+    } catch {
+      toast.error('Xóa thất bại')
+    } finally {
+      setActionId('')
+    }
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">Quản lý bình luận</h1>
-          <p className="text-sm text-muted-foreground">Duyệt và kiểm duyệt bình luận phòng trọ</p>
-        </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={fetchComments} disabled={loading}>
-          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />Làm mới
-        </Button>
-      </div>
+    <>
+      <AdminPageHeader
+        title="Bình luận"
+        description="Duyệt, từ chối hoặc xóa các bình luận xuất hiện trên trang chi tiết phòng."
+        icon={MessageSquare}
+        meta={<Badge variant="secondary">{pagination.total || 0} bình luận</Badge>}
+        onRefresh={fetchComments}
+        refreshing={loading}
+      />
 
-      {/* Status tabs */}
-      <div className="flex border-b gap-0 overflow-x-auto">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => handleStatusChange(tab.value)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors',
-              status === tab.value
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <AdminContent>
+        <AdminTabs value={status} onChange={handleStatusChange} items={STATUS_TABS} />
 
-      {/* List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="flex gap-3 p-4">
-                <Skeleton className="h-9 w-9 rounded-full shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-3.5 w-40" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : comments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-            <MessageSquare className="h-10 w-10 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">Không có bình luận nào</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {comments.map((comment) => {
-            const sc = STATUS_CFG[comment.status] || STATUS_CFG.pending
-            const busy = actionId === comment._id
-            return (
-              <Card key={comment._id} className={cn(
-                'transition-all',
-                comment.status === 'pending' && 'border-amber-200/60 dark:border-amber-800/40',
-              )}>
-                <CardContent className="p-4 space-y-3">
-                  {/* Top: user + room + time + status */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                        {(comment.user?.name || '?')[0].toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{comment.user?.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{comment.user?.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className={cn('text-[10px] h-5', sc.cls)}>
-                        {sc.label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">{dayjs(comment.createdAt).fromNow()}</span>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                    {comment.content}
-                  </div>
-
-                  {/* Room link */}
-                  {comment.room && (
-                    <Link
-                      to={`/rooms/${comment.room.slug}`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {comment.room.title}
-                    </Link>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {comment.status !== 'approved' && (
-                      <Button size="sm" className="h-7 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => handleApprove(comment._id)} disabled={busy}>
-                        <CheckCircle className="h-3.5 w-3.5" />Duyệt
-                      </Button>
-                    )}
-                    {comment.status !== 'rejected' && (
-                      <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => handleReject(comment._id)} disabled={busy}>
-                        <XCircle className="h-3.5 w-3.5" />Từ chối
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm"
-                      className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 ml-auto"
-                      onClick={() => setDeleteTarget(comment)} disabled={busy}>
-                      <Trash2 className="h-3.5 w-3.5" />Xoá
-                    </Button>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Card key={index}>
+                <CardContent className="flex gap-3 p-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-44" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
                   </div>
                 </CardContent>
               </Card>
-            )
-          })}
+            ))}
+          </div>
+        ) : comments.length === 0 ? (
+          <AdminEmptyState icon={MessageSquare} title="Không có bình luận" description="Không có nội dung phù hợp với bộ lọc hiện tại." />
+        ) : (
+          <div className="space-y-3">
+            {comments.map((comment) => {
+              const statusConfig = STATUS_CFG[comment.status] || STATUS_CFG.pending
+              const busy = actionId === comment._id
+              return (
+                <Card key={comment._id} className={cn(comment.status === 'pending' && 'border-amber-200/70')}>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                          {(comment.user?.name || '?')[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{comment.user?.name || 'Người dùng'}</p>
+                          <p className="truncate text-xs text-muted-foreground">{comment.user?.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={statusConfig.cls}>{statusConfig.label}</Badge>
+                        <span className="text-xs text-muted-foreground">{dayjs(comment.createdAt).fromNow()}</span>
+                      </div>
+                    </div>
 
-          <Pagination
-            page={page}
-            totalPages={pagination.totalPages || 1}
-            total={pagination.total || 0}
-            onChange={setPage}
-          />
-        </div>
-      )}
+                    <div className="rounded-lg bg-muted/50 px-4 py-3 text-sm leading-6 whitespace-pre-wrap">
+                      {comment.content}
+                    </div>
 
-      {/* Delete confirm */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      {comment.room ? (
+                        <Link to={`/rooms/${comment.room.slug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          {comment.room.title}
+                        </Link>
+                      ) : <span className="text-xs text-muted-foreground">Phòng không còn tồn tại</span>}
+
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                        {comment.status !== 'approved' && (
+                          <Button size="sm" className="h-8 rounded-lg bg-emerald-600 text-xs hover:bg-emerald-700" onClick={() => handleApprove(comment._id)} disabled={busy}>
+                            <CheckCircle className="h-4 w-4" />
+                            Duyệt
+                          </Button>
+                        )}
+                        {comment.status !== 'rejected' && (
+                          <Button variant="outline" size="sm" className="h-8 rounded-lg border-red-200 text-xs text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => handleReject(comment._id)} disabled={busy}>
+                            <XCircle className="h-4 w-4" />
+                            Từ chối
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteTarget(comment)} disabled={busy}>
+                          <Trash2 className="h-4 w-4" />
+                          Xóa
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+            <AdminPagination page={page} totalPages={pagination.totalPages} total={pagination.total} label="bình luận" onChange={setPage} />
+          </div>
+        )}
+      </AdminContent>
+
       <Dialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-4 w-4 text-destructive" />Xoá bình luận?
-            </DialogTitle>
+            <DialogTitle>Xóa bình luận?</DialogTitle>
             <DialogDescription>
-              Bình luận của <strong>{deleteTarget?.user?.name}</strong> sẽ bị xoá vĩnh viễn.
+              Bình luận của {deleteTarget?.user?.name || 'người dùng'} sẽ bị xóa vĩnh viễn.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Huỷ</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={Boolean(actionId)}>Xoá</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={Boolean(actionId)}>
+              Xóa
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

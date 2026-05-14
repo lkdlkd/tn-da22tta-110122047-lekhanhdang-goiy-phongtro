@@ -403,17 +403,24 @@ export default function MessagesPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex h-[calc(100svh-56px)] min-h-[560px] overflow-hidden bg-muted/20">
       {/* ── Sidebar: Conversation List ─────────────────────────────────── */}
       <div
         className={cn(
-          'flex flex-col w-full shrink-0 border-r bg-background md:w-72 lg:w-80',
+          'flex w-full shrink-0 flex-col border-r bg-background md:w-80 lg:w-[360px]',
           activeConvId && 'hidden md:flex'
         )}
       >
         {/* Sidebar header — aligns with navbar h-14 */}
-        <div className="flex h-14 items-center justify-between border-b px-4 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
+          <div className="flex items-center gap-2 [&>h1]:hidden">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MessageCircle className="h-4 w-4" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold">Tin nhắn</h1>
+              <p className="text-xs text-muted-foreground">{conversations.length} hội thoại</p>
+            </div>
             <h1 className="font-semibold text-base">Tin nhắn</h1>
             {totalUnread > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
@@ -424,7 +431,7 @@ export default function MessagesPage() {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1">
           <ConversationList
             conversations={conversations}
             activeConvId={activeConvId}
@@ -441,8 +448,14 @@ export default function MessagesPage() {
       <div className={cn('flex flex-1 flex-col min-w-0', !activeConvId && 'hidden md:flex')}>
         {!activeConvId ? (
           /* Empty state */
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
-            <MessageCircle className="h-14 w-14 opacity-20" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center text-muted-foreground [&>p]:hidden">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border bg-background">
+              <MessageCircle className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Chọn một hội thoại</p>
+              <p className="mt-1 max-w-sm text-sm leading-6">Trao đổi với chủ trọ hoặc sinh viên, gửi ảnh/video và đặt lịch xem phòng ngay trong chat.</p>
+            </div>
             <p className="text-sm">Chọn một cuộc hội thoại để bắt đầu</p>
           </div>
         ) : (
@@ -461,15 +474,16 @@ export default function MessagesPage() {
             <div className="relative flex-1 min-h-0 flex flex-col">
               <div
                 ref={msgContainerRef}
-                className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-1.5"
+                className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-muted/20 px-3 py-4 sm:px-5"
               >
                 {/* Nút tải tin cũ hơn — chỉ hiện khi còn tin chưa load */}
                 {hasMore && !loadingMore && !loadingMsgs && (
                   <div className="flex justify-center py-2">
                     <button
                       onClick={handleLoadMore}
-                      className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      className="rounded-full border bg-background px-3 py-1 text-[0px] text-muted-foreground shadow-sm transition-colors hover:text-foreground"
                     >
+                      <span className="text-xs">Tải tin cũ hơn</span>
                       ↑ Tải tin cũ hơn
                     </button>
                   </div>
@@ -489,9 +503,18 @@ export default function MessagesPage() {
                   ))}
                 </div>
               ) : messages.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground pt-8">
+                <>
+                <div className="flex flex-col items-center justify-center gap-2 pt-16 text-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-background text-muted-foreground">
+                    <MessageCircle className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Bắt đầu cuộc trò chuyện</p>
+                  <p className="max-w-xs text-xs leading-5 text-muted-foreground">Gửi tin nhắn, ảnh/video hoặc đặt lịch xem phòng nếu hội thoại có gắn phòng.</p>
+                </div>
+                <p className="hidden">
                   Bắt đầu cuộc trò chuyện 👋
                 </p>
+                </>
               ) : (
                 messages.map((msg, idx) => {
                   const isMine = String(msg.sender?._id || msg.sender) === String(user?._id)
@@ -525,8 +548,9 @@ export default function MessagesPage() {
                     setHasUnreadNew(false)
                     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
                   }}
-                  className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground shadow-lg hover:bg-primary/90 transition-all animate-bounce"
+                  className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[0px] font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
                 >
+                  <span className="text-[11px]">Tin nhắn mới</span>
                   ↓ Tin nhắn mới
                 </button>
               )}
