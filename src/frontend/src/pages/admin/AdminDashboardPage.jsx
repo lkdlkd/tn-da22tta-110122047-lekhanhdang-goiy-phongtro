@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 import { AdminContent, AdminMetricCard, AdminPageHeader } from '@/pages/admin/components/AdminUI'
 
 const STAT_CONFIGS = [
@@ -57,12 +58,16 @@ const STAT_CONFIGS = [
 function MonthlyBar({ month, year, count, max }) {
   const pct = max > 0 ? Math.max((count / max) * 100, 6) : 6
   return (
-    <div className="flex min-w-10 flex-col items-center gap-1">
-      <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">{count}</span>
-      <div className="flex h-20 w-8 items-end overflow-hidden rounded-lg bg-muted">
-        <div className="w-full rounded-lg bg-primary/75 transition-all" style={{ height: `${pct}%` }} />
+    <div className="flex min-w-10 flex-col items-center gap-1 group/bar">
+      <span className="text-[10px] font-bold text-muted-foreground/80 tabular-nums opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200">{count}</span>
+      <div className="flex h-20 w-8 items-end overflow-hidden rounded-lg bg-muted/60 border border-transparent hover:border-primary/20 transition-all duration-300">
+        <div 
+          className="w-full rounded-lg bg-gradient-to-t from-primary/85 to-primary transition-all duration-500 hover:brightness-110" 
+          style={{ height: `${pct}%` }} 
+          title={`Tháng ${month}/${year}: ${count} phòng`}
+        />
       </div>
-      <span className="text-[10px] text-muted-foreground">T{month}/{String(year).slice(2)}</span>
+      <span className="text-[10px] font-semibold text-muted-foreground">T{month}/{String(year).slice(2)}</span>
     </div>
   )
 }
@@ -71,23 +76,23 @@ function QuickLink({ to, icon: Icon, label, desc, badge }) {
   return (
     <Link
       to={to}
-      className="group flex items-center gap-3 rounded-lg border bg-background p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+      className="group flex items-center gap-3 rounded-xl border bg-background p-3 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:shadow-sm"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">{label}</p>
+          <p className="text-sm font-bold text-foreground">{label}</p>
           {badge > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[9px] font-black text-primary-foreground shadow-sm shadow-primary/20 animate-pulse">
               {badge}
             </span>
           )}
         </div>
-        <p className="text-xs leading-5 text-muted-foreground">{desc}</p>
+        <p className="text-xs leading-5 text-muted-foreground/80 truncate">{desc}</p>
       </div>
-      <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+      <ArrowRight className="h-4 w-4 text-muted-foreground transition-all duration-300 group-hover:text-primary group-hover:translate-x-0.5" />
     </Link>
   )
 }
@@ -122,9 +127,10 @@ export default function AdminDashboardPage() {
 
       <AdminContent>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {STAT_CONFIGS.map((config) => (
-            loading ? (
-              <Card key={config.key}>
+          {STAT_CONFIGS.map((config) => {
+            const { key, ...rest } = config
+            return loading ? (
+              <Card key={key}>
                 <CardContent className="p-5">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="mt-3 h-9 w-16" />
@@ -133,13 +139,13 @@ export default function AdminDashboardPage() {
               </Card>
             ) : (
               <AdminMetricCard
-                key={config.key}
-                {...config}
-                value={stats?.[config.key]?.toLocaleString?.() ?? stats?.[config.key] ?? 0}
-                urgent={config.key === 'pendingRooms' && stats?.pendingRooms > 0}
+                key={key}
+                {...rest}
+                value={stats?.[key]?.toLocaleString?.() ?? stats?.[key] ?? 0}
+                urgent={key === 'pendingRooms' && stats?.pendingRooms > 0}
               />
             )
-          ))}
+          })}
         </div>
 
         <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
@@ -175,38 +181,48 @@ export default function AdminDashboardPage() {
                   <p className="text-sm">Chưa có dữ liệu phòng nổi bật.</p>
                 </div>
               ) : (
-                stats.topRooms.map((room, index) => (
-                  <div key={room._id} className="flex items-center gap-4 border-b px-5 py-3 transition-colors last:border-b-0 hover:bg-muted/30">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    {room.images?.[0] ? (
-                      <img src={room.images[0]} alt="" className="h-12 w-20 shrink-0 rounded-lg border object-cover" />
-                    ) : (
-                      <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                        <Home className="h-4 w-4 text-muted-foreground" />
+                stats.topRooms.map((room, index) => {
+                  const rankCls = [
+                    'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/30',
+                    'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700/50',
+                    'bg-orange-100 text-orange-850 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900/20'
+                  ][index] || 'bg-muted text-muted-foreground'
+
+                  return (
+                    <div key={room._id} className="group/item flex items-center gap-4 border-b px-5 py-3.5 transition-colors last:border-b-0 hover:bg-muted/40">
+                      <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold border", rankCls)}>
+                        {index + 1}
+                      </span>
+                      {room.images?.[0] ? (
+                        <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                          <img src={room.images[0]} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover/item:scale-105" />
+                        </div>
+                      ) : (
+                        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border bg-muted">
+                          <Home className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/rooms/${room.slug}`} target="_blank" className="line-clamp-1 text-sm font-bold text-foreground hover:text-primary transition-colors">
+                          {room.title}
+                        </Link>
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {room.address?.district && <span className="font-medium">{room.address.district}</span>}
+                          {room.price && (
+                            <>
+                              <span className="text-muted-foreground/60">•</span>
+                              <span className="font-semibold text-primary">{new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(room.price)}đ/tháng</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <Link to={`/rooms/${room.slug}`} target="_blank" className="line-clamp-1 text-sm font-semibold hover:text-primary">
-                        {room.title}
-                      </Link>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                        {room.address?.district && <span>{room.address.district}</span>}
-                        {room.price && (
-                          <>
-                            <Separator orientation="vertical" className="h-3" />
-                            <span>{new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(room.price)}đ/tháng</span>
-                          </>
-                        )}
+                      <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground/80 group-hover/item:text-primary transition-colors">
+                        <Eye className="h-3.5 w-3.5" />
+                        <span className="font-bold tabular-nums">{room.viewCount?.toLocaleString?.() || 0}</span>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                      <Eye className="h-4 w-4" />
-                      <span className="font-semibold tabular-nums">{room.viewCount?.toLocaleString?.() || 0}</span>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </CardContent>
           </Card>

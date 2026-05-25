@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BedDouble, CheckCircle2, Eye, EyeOff, MapPin, ShieldCheck, Sparkles } from 'lucide-react'
+import { AlertCircle, BedDouble, CheckCircle2, Eye, EyeOff, MapPin, ShieldCheck, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -193,9 +193,14 @@ export function AuthStatusCard({ icon: Icon, tone = 'primary', title, descriptio
 export function FormField({ id, label, error, children }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={cn(error && 'text-destructive font-medium')}>{label}</Label>
       {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive mt-1 animate-fade-in">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -218,7 +223,10 @@ export function PasswordField({
           type={show ? 'text' : 'password'}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          className="h-11 rounded-lg pr-11"
+          className={cn(
+            'h-11 rounded-lg pr-11 transition-all duration-300',
+            error ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+          )}
           {...register}
         />
         <button

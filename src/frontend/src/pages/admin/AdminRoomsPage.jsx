@@ -207,7 +207,122 @@ export default function AdminRoomsPage() {
           </div>
         </div>
 
-        <Card className="overflow-hidden">
+        {/* Mobile Cards Layout (hidden on desktop) */}
+        <div className="grid gap-3.5 md:hidden">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <Card key={index} className="p-4 space-y-3">
+                <div className="flex gap-3">
+                  <Skeleton className="h-16 w-24 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3.5 w-1/2" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <div className="flex gap-2 pt-2 border-t">
+                  <Skeleton className="h-8 flex-1 rounded-lg" />
+                  <Skeleton className="h-8 w-10 rounded-lg" />
+                </div>
+              </Card>
+            ))
+          ) : rooms.length === 0 ? (
+            <Card className="py-14 text-center text-muted-foreground">
+              Không tìm thấy phòng phù hợp với bộ lọc.
+            </Card>
+          ) : (
+            rooms.map((room) => {
+              const status = STATUS_CFG[room.status] || STATUS_CFG.pending
+              const isFlagged = room.status === 'flagged'
+              const busy = actionLoading === room._id
+              return (
+                <Card key={room._id} className={cn(
+                  'p-4 space-y-3.5 transition-all duration-300 hover:shadow-sm',
+                  isFlagged && 'border-l-4 border-l-orange-400 bg-orange-50/10 dark:bg-orange-950/5',
+                  room.status === 'rejected' && 'opacity-80'
+                )}>
+                  <div className="flex gap-3.5">
+                    {room.images?.[0] ? (
+                      <img src={room.images[0]} alt="" className="h-16 w-24 shrink-0 rounded-lg border object-cover bg-muted" />
+                    ) : (
+                      <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+                        <Home className="h-5 w-5" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-sm text-foreground line-clamp-1 leading-snug">{room.title}</h3>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/75" />
+                        <span className="line-clamp-1">{formatAddress(room.address)}</span>
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className={cn('h-5 text-[10px] px-2 font-semibold', status.cls)}>
+                          {status.label}
+                        </Badge>
+                        <Badge variant="outline" className={cn('h-5 text-[10px] px-2 font-medium', room.isAvailable ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'text-muted-foreground')}>
+                          {room.isAvailable ? 'Còn trống' : 'Đã cho thuê'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 border-t pt-3 text-xs text-muted-foreground">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">Chủ trọ</span>
+                      <span className="font-semibold text-foreground truncate block">{room.landlord?.name || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">Giá thuê</span>
+                      <span className="font-bold text-primary">{fmtVND(room.price)}/tháng</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-3">
+                    <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs font-semibold px-2.5 flex-1" asChild>
+                      <Link to={`/rooms/${room.slug}`} target="_blank">
+                        <Eye className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                        Xem phòng
+                      </Link>
+                    </Button>
+                    {room.status === 'pending' && (
+                      <>
+                        <Button size="sm" className="h-8 rounded-lg bg-emerald-600 text-xs font-semibold px-2.5 text-white hover:bg-emerald-700" disabled={busy} onClick={() => handleApprove(room._id)}>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                          Duyệt
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold px-2.5" disabled={busy} onClick={() => setRejectTarget(room)}>
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          Từ chối
+                        </Button>
+                      </>
+                    )}
+                    {isFlagged && (
+                      <Button size="sm" className="h-8 rounded-lg bg-emerald-600 text-xs font-semibold px-2.5 text-white hover:bg-emerald-700" disabled={busy} onClick={() => handleRestore(room._id)}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Khôi phục
+                      </Button>
+                    )}
+                    {room.status === 'approved' && (
+                      <Button variant="outline" size="sm" className="h-8 rounded-lg border-orange-200 text-orange-600 hover:bg-orange-50 text-xs font-semibold px-2.5" disabled={busy} onClick={() => setDeleteTarget({ room, mode: 'hide' })}>
+                        <EyeOff className="h-3.5 w-3.5 mr-1" />
+                        Ẩn phòng
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-red-600 hover:bg-red-50 shrink-0" disabled={busy} onClick={() => setDeleteTarget({ room, mode: 'delete' })} title="Xóa vĩnh viễn">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </Card>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop Table Layout (hidden on mobile) */}
+        <Card className="hidden md:block overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-sm">
               <thead>

@@ -33,8 +33,9 @@ function SidebarLink({ to, label, icon: Icon, end }) {
 
 export default function AdminLayout() {
   return (
-    <div className="flex min-h-[calc(100svh-var(--navbar-h))] bg-muted/25">
-      <aside className="sticky top-[var(--navbar-h)] hidden h-[calc(100svh-var(--navbar-h))] w-64 shrink-0 flex-col border-r bg-background lg:flex">
+    <div className="flex min-h-[calc(100svh-4rem)] bg-muted/25">
+      {/* Desktop Sidebar (Fixed on the left side) */}
+      <aside className="fixed left-0 top-16 bottom-0 hidden w-64 shrink-0 flex-col border-r bg-background lg:flex z-30">
         <div className="flex items-center gap-3 px-5 py-5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Shield className="h-5 w-5" />
@@ -63,9 +64,11 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-[var(--navbar-h)] z-40 border-b bg-background/95 backdrop-blur lg:hidden">
-          <nav className="flex gap-1 overflow-x-auto px-3 py-2 scrollbar-none">
+      {/* Main Content Area (Offset by sidebar width on desktop) */}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
+        {/* Mobile Sub-Navigation Header Bar (Sticky) */}
+        <div className="sticky top-16 z-40 border-b bg-background/90 shadow-sm backdrop-blur-md lg:hidden">
+          <nav className="flex gap-1.5 overflow-x-auto p-2 scrollbar-none justify-start items-center">
             {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
@@ -73,12 +76,14 @@ export default function AdminLayout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors',
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    'flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-all duration-300',
+                    isActive 
+                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 scale-[1.02]' 
+                      : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground'
                   )
                 }
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {label}
               </NavLink>
             ))}

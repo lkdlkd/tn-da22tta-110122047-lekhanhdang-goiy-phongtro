@@ -10,7 +10,7 @@ import { loginSuccess } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CardContent, CardFooter } from '@/components/ui/card'
-import { Building2, GraduationCap, Mail, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { AlertCircle, Building2, GraduationCap, Mail, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
 import {
   AuthCard,
   AuthShell,
@@ -58,6 +58,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [landlordVerifyPending, setLandlordVerifyPending] = useState(false)
   const [pendingEmail, setPendingEmail] = useState('')
+  const [apiError, setApiError] = useState('')
 
   const {
     register,
@@ -73,6 +74,7 @@ export default function RegisterPage() {
   const selectedRole = watch('role')
 
   const onSubmit = async (data) => {
+    setApiError('')
     try {
       const res = await registerApi(data)
 
@@ -90,6 +92,7 @@ export default function RegisterPage() {
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Đăng ký thất bại'
+      setApiError(message)
       toast.error(message)
     }
   }
@@ -159,12 +162,22 @@ export default function RegisterPage() {
                 {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
               </div>
 
+              {apiError && (
+                <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                  <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
+                </div>
+              )}
+
               <FormField id="register-name" label="Họ và tên" error={errors.name?.message}>
                 <Input
                   id="register-name"
                   autoComplete="name"
                   placeholder="Nguyễn Văn A"
-                  className="h-11 rounded-lg"
+                  className={cn(
+                    'h-11 rounded-lg transition-all duration-300',
+                    errors.name ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+                  )}
                   {...register('name')}
                 />
               </FormField>
@@ -175,7 +188,10 @@ export default function RegisterPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="example@email.com"
-                  className="h-11 rounded-lg"
+                  className={cn(
+                    'h-11 rounded-lg transition-all duration-300',
+                    errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+                  )}
                   {...register('email')}
                 />
               </FormField>
@@ -196,7 +212,10 @@ export default function RegisterPage() {
                   type="password"
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  className="h-11 rounded-lg"
+                  className={cn(
+                    'h-11 rounded-lg transition-all duration-300',
+                    errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+                  )}
                   {...register('confirmPassword')}
                 />
               </FormField>

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { BedDouble, Globe, GraduationCap, Mail, MapPin, ShieldCheck } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
@@ -34,7 +34,16 @@ const FOOTER_LINKS = [
 ]
 
 export function Footer() {
+  const { pathname } = useLocation()
   const year = new Date().getFullYear()
+
+  // Ẩn footer ở các trang console Admin & Landlord để tối ưu không gian hiển thị và giữ cố định layout
+  const isConsole = pathname.startsWith('/admin') ||
+                    pathname.startsWith('/landlord/dashboard') ||
+                    pathname.startsWith('/landlord/rooms') ||
+                    pathname.startsWith('/landlord/appointments')
+
+  if (isConsole) return null
 
   return (
     <footer className="mt-auto border-t bg-background">

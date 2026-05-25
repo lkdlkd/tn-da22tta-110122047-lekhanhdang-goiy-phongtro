@@ -158,36 +158,39 @@ export function AdminEmptyState({ icon: Icon, title, description }) {
 
 export function AdminMetricCard({ icon: Icon, label, value, description, href, tone = 'primary', urgent }) {
   const tones = {
-    primary: 'bg-primary/10 text-primary',
-    amber: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-    violet: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300',
-    red: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+    primary: 'bg-primary/10 text-primary border border-primary/20',
+    amber: 'bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/30',
+    emerald: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/30',
+    violet: 'bg-violet-50 text-violet-700 border border-violet-200/60 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-900/30',
+    red: 'bg-red-50 text-red-700 border border-red-200/60 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900/30',
   }
 
   const body = (
-    <Card className={cn('h-full transition-colors hover:border-primary/40', urgent && 'border-amber-300')}>
+    <Card className={cn(
+      'h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30',
+      urgent && 'border-amber-300/80 bg-amber-50/10 dark:bg-amber-950/5'
+    )}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-            <p className="mt-2 text-3xl font-extrabold tracking-tight tabular-nums">{value ?? '0'}</p>
-            {description && <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{description}</p>}
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">{label}</p>
+            <p className="mt-2 text-3xl font-extrabold tracking-tight tabular-nums bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">{value ?? '0'}</p>
+            {description && <p className="mt-1.5 text-xs leading-5 text-muted-foreground/90">{description}</p>}
           </div>
           {Icon && (
-            <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', tones[tone])}>
+            <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-105', tones[tone])}>
               <Icon className="h-5 w-5" />
             </div>
           )}
         </div>
         {urgent && (
-          <Badge variant="outline" className="mt-4 border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-            Cần xử lý
+          <Badge variant="outline" className="mt-4 border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 animate-pulse">
+            Cần xử lý gấp
           </Badge>
         )}
       </CardContent>
     </Card>
   )
 
-  return href ? <Link to={href}>{body}</Link> : body
+  return href ? <Link to={href} className="group block">{body}</Link> : body
 }

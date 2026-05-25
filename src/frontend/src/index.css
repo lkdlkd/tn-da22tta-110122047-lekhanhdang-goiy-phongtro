@@ -55,8 +55,8 @@
   }
   html {
     scroll-behavior: smooth;
-    /* Navbar height token — update if h-14 changes */
-    --navbar-h: 3.5rem; /* h-14 = 56px */
+    /* Navbar height token — update if h-16 changes */
+    --navbar-h: 4rem; /* h-16 = 64px */
   }
   body {
     @apply bg-background text-foreground;

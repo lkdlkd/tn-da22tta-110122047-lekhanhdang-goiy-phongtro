@@ -10,7 +10,7 @@ import { loginStart, loginSuccess, loginFailure } from '@/features/auth/authSlic
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CardContent, CardFooter } from '@/components/ui/card'
-import { Building2, GraduationCap, Loader2, Mail, MapPinned, Search, Sparkles, X } from 'lucide-react'
+import { AlertCircle, Building2, GraduationCap, Loader2, Mail, MapPinned, Search, Sparkles, X } from 'lucide-react'
 import {
   AuthCard,
   AuthShell,
@@ -121,6 +121,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showRolePicker, setShowRolePicker] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   const {
     register,
@@ -162,6 +163,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data) => {
     dispatch(loginStart())
+    setApiError('')
     try {
       const res = await loginApi(data)
       dispatch(loginSuccess(res.data.data))
@@ -170,6 +172,7 @@ export default function LoginPage() {
     } catch (err) {
       const message = err.response?.data?.message || 'Đăng nhập thất bại'
       dispatch(loginFailure(message))
+      setApiError(message)
       toast.error(message)
     }
   }
@@ -235,13 +238,23 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {apiError && (
+                <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                  <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
+                </div>
+              )}
+
               <FormField id="login-email" label="Email" error={errors.email?.message}>
                 <Input
                   id="login-email"
                   type="email"
                   autoComplete="email"
                   placeholder="example@email.com"
-                  className="h-11 rounded-lg"
+                  className={cn(
+                    'h-11 rounded-lg transition-all duration-300',
+                    errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+                  )}
                   {...register('email')}
                 />
               </FormField>

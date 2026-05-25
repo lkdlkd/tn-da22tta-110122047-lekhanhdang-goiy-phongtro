@@ -192,9 +192,9 @@ export default function LandlordProfilePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hidden lg:block">
             <CardContent className="space-y-2 p-4">
-              <h2 className="font-semibold">Lọc nhanh</h2>
+              <h2 className="font-semibold text-sm text-foreground/90">Lọc nhanh</h2>
               {[
                 { value: 'all', label: 'Tất cả phòng', count: rooms.length },
                 { value: 'available', label: 'Còn trống', count: rooms.filter((room) => room.isAvailable).length },
@@ -205,8 +205,8 @@ export default function LandlordProfilePage() {
                   type="button"
                   onClick={() => setFilter(item.value)}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
-                    filter === item.value ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-muted'
+                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-300 font-medium',
+                    filter === item.value ? 'bg-primary/10 font-bold text-primary' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <span>{item.label}</span>
@@ -218,6 +218,40 @@ export default function LandlordProfilePage() {
         </aside>
 
         <section className="min-w-0 space-y-4">
+          {/* Mobile Filter Tabs Segment (hidden on desktop) */}
+          <div className="overflow-x-auto rounded-xl border bg-card p-1.5 shadow-sm scrollbar-none lg:hidden">
+            <div className="flex min-w-max gap-1">
+              {[
+                { value: 'all', label: 'Tất cả phòng', count: rooms.length },
+                { value: 'available', label: 'Còn trống', count: rooms.filter((room) => room.isAvailable).length },
+                { value: 'rented', label: 'Đã cho thuê', count: rooms.filter((room) => !room.isAvailable).length },
+              ].map((item) => {
+                const active = filter === item.value
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setFilter(item.value)}
+                    className={cn(
+                      'flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all duration-300',
+                      active 
+                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/10' 
+                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                    )}
+                  >
+                    {item.label}
+                    <span className={cn(
+                      'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black',
+                      active ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    )}>
+                      {item.count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <Card>
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>

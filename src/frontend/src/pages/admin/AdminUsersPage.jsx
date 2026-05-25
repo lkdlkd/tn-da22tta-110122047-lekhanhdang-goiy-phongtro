@@ -134,7 +134,112 @@ export default function AdminUsersPage() {
 
         <AdminFilterPills value={banFilter} onChange={setBanFilter} items={BAN_OPTIONS} />
 
-        <Card className="overflow-hidden">
+        {/* Mobile Cards Layout (hidden on desktop) */}
+        <div className="grid gap-3.5 md:hidden">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <Card key={index} className="p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-8 w-full rounded-lg" />
+              </Card>
+            ))
+          ) : users.length === 0 ? (
+            <Card className="py-14 text-center text-muted-foreground">
+              Không có người dùng phù hợp với bộ lọc.
+            </Card>
+          ) : (
+            users.map((user) => {
+              const role = ROLE_CFG[user.role] || ROLE_CFG.student
+              return (
+                <Card key={user._id} className={cn(
+                  'p-4 space-y-3.5 transition-all duration-300 hover:shadow-sm',
+                  user.isBanned && 'bg-red-50/20 opacity-80 dark:bg-red-950/5 border-l-4 border-l-red-500'
+                )}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border text-sm font-bold', role.avatarCls)}>
+                        {user.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : (user.name || '?')[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-foreground truncate">{user.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">ID: {user._id.slice(-6)} · {dayjs(user.createdAt).format('DD/MM/YYYY')}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={role.badgeCls}>{role.label}</Badge>
+                  </div>
+
+                  <div className="space-y-1.5 border-t pt-3.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground/75" />
+                      <a href={`mailto:${user.email}`} className="break-all font-medium text-foreground hover:text-primary hover:underline">{user.email}</a>
+                    </div>
+                    {user.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground/75" />
+                        <a href={`tel:${user.phone}`} className="font-medium text-foreground hover:text-primary hover:underline">{user.phone}</a>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground/60">Trạng thái:</span>
+                      {user.isEmailVerified ? (
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700 h-4.5 px-1.5 font-semibold">
+                          Đã xác minh
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] font-medium text-muted-foreground/80">Chưa xác minh</span>
+                      )}
+                      {user.isBanned && (
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-[10px] text-red-700 h-4.5 px-1.5 font-semibold">
+                          Đang khóa
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {user.role !== 'admin' && (
+                    <div className="border-t pt-3 flex justify-end">
+                      <Button
+                        variant={user.isBanned ? 'outline' : 'ghost'}
+                        size="sm"
+                        className={cn(
+                          'h-8 rounded-lg text-xs font-semibold px-3.5 flex-1 sm:flex-initial',
+                          !user.isBanned && 'text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/20'
+                        )}
+                        disabled={actionLoading === user._id}
+                        onClick={() => handleBan(user._id, user.isBanned)}
+                      >
+                        {user.isBanned ? (
+                          <>
+                            <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                            Mở khóa tài khoản
+                          </>
+                        ) : (
+                          <>
+                            <ShieldBan className="h-3.5 w-3.5 mr-1" />
+                            Khóa tài khoản
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop Table Layout (hidden on mobile) */}
+        <Card className="hidden md:block overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
               <thead>

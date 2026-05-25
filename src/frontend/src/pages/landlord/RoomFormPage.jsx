@@ -488,14 +488,14 @@ export default function RoomFormPage() {
               <MapContainer
                 center={form.location ? [form.location.lat, form.location.lng] : [10.2547, 105.9722]}
                 zoom={13}
-                className="h-[360px] w-full"
+                className="h-[260px] sm:h-[360px] w-full"
               >
                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapViewport location={form.location} />
                 <LocationPicker value={form.location} onPick={applyLocationSelection} />
               </MapContainer>
             </div>
-            <p className="text-xs leading-5 text-muted-foreground">Click trực tiếp lên bản đồ để ghim vị trí phòng. Địa chỉ sẽ được tự động gợi ý nếu dịch vụ bản đồ phản hồi.</p>
+            <p className="text-xs leading-5 text-muted-foreground">Click trực tiếp lên bản đồ để ghim vị trí phòng (dùng 2 ngón tay để cuộn qua bản đồ trên di động). Địa chỉ sẽ được tự động gợi ý nếu dịch vụ bản đồ phản hồi.</p>
           </FormSection>
 
           <FormSection number="3" title="Tiện ích" description="Chọn những tiện ích thật sự có trong phòng." icon={Wifi}>
@@ -600,6 +600,30 @@ export default function RoomFormPage() {
           </Card>
         </aside>
       </LandlordContent>
+
+      {/* Sticky Bottom Actions Bar for mobile/tablet (hidden on desktop) */}
+      <div className="sticky bottom-0 left-0 right-0 z-50 border-t bg-background/90 p-3.5 shadow-lg backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex items-center justify-between gap-4 max-w-7xl">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground/75 tracking-wider">Tiến độ thông tin</p>
+            <div className="mt-1 flex items-center gap-2">
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-primary" style={{ width: `${(completedItems / 6) * 100}%` }} />
+              </div>
+              <span className="text-xs font-bold text-foreground">{completedItems}/6</span>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg text-xs" asChild>
+              <Link to="/landlord/rooms">Huỷ</Link>
+            </Button>
+            <Button type="submit" form="room-form" disabled={saving} size="sm" className="h-9 rounded-lg px-4 text-xs font-bold shadow-sm shadow-primary/20 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {saving ? 'Đang lưu...' : isEditMode ? 'Lưu thay đổi' : 'Đăng phòng'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
