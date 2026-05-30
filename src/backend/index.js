@@ -221,7 +221,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],   // Vite inline scripts
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],   // Cho phép load script Google GSI
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: [
@@ -238,11 +238,12 @@ app.use(helmet({
         "'self'",
         'https://res.cloudinary.com',
         'https://nominatim.openstreetmap.org',
+        'https://accounts.google.com',             // Cho phép API kết nối Google
         'wss:',                                    // WebSocket (socket.io)
         'ws:',
       ],
       mediaSrc: ["'self'", 'https://res.cloudinary.com'],  // Video phòng
-      frameSrc: ["'none'"],
+      frameSrc: ["'self'", "https://accounts.google.com"], // Cho phép hiển thị iframe đăng nhập Google
       objectSrc: ["'none'"],
     },
   },

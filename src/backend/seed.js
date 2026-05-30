@@ -1,5 +1,5 @@
 /**
- * seed.js — Tạo dữ liệu mẫu 25 phòng trọ tại Vĩnh Long
+ * seed.js — Tạo dữ liệu mẫu 25 phòng trọ tại Trà Vinh
  *
  * Cách chạy:
  *   node seed.js
@@ -37,8 +37,8 @@ const pickImages = (n = 2) => {
   return shuffled.slice(0, n)
 }
 
-// ── Toạ độ Trung tâm Vĩnh Long ───────────────────────────────────────────────
-// Lat: 10.2397, Lng: 105.9656 — TP. Vĩnh Long
+// ── Toạ độ Trung tâm Trà Vinh ───────────────────────────────────────────────
+// Lat: 9.9525, Lng: 106.3441 — TP. Trà Vinh
 const spreadCoord = (baseLat, baseLng, rangeKm = 5) => {
   const toLatDeg = rangeKm / 111.0
   const toLngDeg = rangeKm / (111.0 * Math.cos((baseLat * Math.PI) / 180))
@@ -48,18 +48,18 @@ const spreadCoord = (baseLat, baseLng, rangeKm = 5) => {
   }
 }
 
-const BASE_LAT = 10.2397
-const BASE_LNG = 105.9656
+const BASE_LAT = 9.9525
+const BASE_LNG = 106.3441
 
-// ── Dữ liệu các phường/xã ở Vĩnh Long ───────────────────────────────────────
+// ── Dữ liệu các phường/xã ở Trà Vinh ───────────────────────────────────────
 const WARDS = [
   'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5',
-  'Phường 8', 'Phường 9', 'Xã Trường An', 'Xã Tân Ngãi',
+  'Phường 6', 'Phường 7', 'Xã Long Đức',
 ]
 const STREETS = [
-  'Đường 3/2', 'Đường Hùng Vương', 'Đường Lê Lợi', 'Đường Trần Phú',
-  'Đường Phạm Thái Bường', 'Đường Nguyễn Văn Linh', 'Đường 30/4',
-  'Hẻm 10 đường Nguyễn Huệ', 'Đường Ngô Quyền', 'Đường Hoàng Thái Hiếu',
+  'Đường Nguyễn Đáng', 'Đường Trần Phú', 'Đường Lê Văn Tám', 'Đường Điện Biên Phủ',
+  'Đường Trần Quốc Tuấn', 'Đường Phạm Thái Bường', 'Đường Nguyễn Thái Học',
+  'Đường Hùng Vương', 'Đường Sơn Thông', 'Đường Đồng Khởi',
 ]
 
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -94,18 +94,18 @@ const DESCRIPTIONS = [
   (type, area, price) => `Phòng ${type.replace('_', ' ')} ${area}m² sạch sẽ, yên tĩnh, phù hợp sinh viên hoặc người đi làm. Giá chỉ ${price.toLocaleString('vi-VN')}đ/tháng đã bao gồm điện nước. Chủ nhà nhiệt tình, thân thiện, sẵn sàng hỗ trợ khi cần.`,
   (type, area, price) => `Cho thuê phòng ${area}m² loại ${type.replace('_', ' ')}, thoáng mát, có cửa sổ hướng đường. Khu vực an ninh tốt, gần trường học, chợ, siêu thị. Liên hệ ngay để được tư vấn chi tiết. Giá: ${price.toLocaleString('vi-VN')}đ/tháng.`,
   (type, area, price) => `Phòng trống cần cho thuê ngay. Diện tích ${area}m² thoải mái, phù hợp cho ${type === 'ký_túc_xá' ? 'sinh viên' : 'cặp đôi hoặc gia đình nhỏ'}. Giá thuê ${price.toLocaleString('vi-VN')}đ/tháng. Có thể thương lượng nếu thuê dài hạn.`,
-  (type, area, price) => `Cần tìm người thuê phòng loại ${type.replace('_', ' ')}, diện tích ${area}m², nội thất cơ bản đầy đủ. Vị trí đẹp, gần trung tâm thành phố Vĩnh Long. Giá ưu đãi: ${price.toLocaleString('vi-VN')}đ/tháng.`,
+  (type, area, price) => `Cần tìm người thuê phòng loại ${type.replace('_', ' ')}, diện tích ${area}m², nội thất cơ bản đầy đủ. Vị trí đẹp, gần trung tâm thành phố Trà Vinh. Giá ưu đãi: ${price.toLocaleString('vi-VN')}đ/tháng.`,
 ]
 
 const TITLES = [
   (ward) => `Phòng trọ đẹp gần trung tâm ${ward}`,
   (ward) => `Cho thuê phòng sạch sẽ, tiện nghi đầy đủ tại ${ward}`,
   (ward) => `Phòng trọ giá rẻ sinh viên ${ward}`,
-  (ward) => `Chung cư mini hiện đại tại ${ward} Vĩnh Long`,
+  (ward) => `Chung cư mini hiện đại tại ${ward} Trà Vinh`,
   (ward) => `Nhà nguyên căn rộng rãi, hẻm yên tĩnh ${ward}`,
   (ward) => `Phòng ký túc xá có máy lạnh ${ward}`,
   (ward) => `Phòng trọ cao cấp, đầy đủ nội thất ${ward}`,
-  (ward) => `Cho thuê phòng giá hợp lý tại ${ward} TP. Vĩnh Long`,
+  (ward) => `Cho thuê phòng giá hợp lý tại ${ward} TP. Trà Vinh`,
 ]
 
 // ── Hàm tạo seed ─────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ async function seed() {
       roomType: tpl.type,
       amenities,
       images: pickImages(randInt(2, 4)),
-      address: `${randInt(1, 200)} ${street}, ${ward}, TP. Vĩnh Long, Vĩnh Long`,
+      address: `${randInt(1, 200)} ${street}, ${ward}, TP. Trà Vinh, Trà Vinh`,
       location: {
         type: 'Point',
         coordinates: [coords.lng, coords.lat],
