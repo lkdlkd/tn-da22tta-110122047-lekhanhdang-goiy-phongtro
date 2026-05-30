@@ -5,12 +5,12 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast } from 'sonner'
-import { registerApi } from '@/services/authService'
+import { registerApi, finalizeRoleApi, googleLoginApi } from '@/services/authService'
 import { loginSuccess } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CardContent, CardFooter } from '@/components/ui/card'
-import { AlertCircle, Building2, GraduationCap, Mail, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { AlertCircle, Building2, GraduationCap, Loader2, Mail, MessageCircle, ShieldCheck } from 'lucide-react'
 import {
   AuthCard,
   AuthShell,
@@ -29,20 +29,36 @@ const schema = yup.object({
     .string()
     .oneOf([yup.ref('password')], 'Mật khẩu xác nhận không khớp')
     .required('Vui lòng xác nhận mật khẩu'),
-  role: yup.string().oneOf(['student', 'landlord']).required('Vui lòng chọn loại tài khoản'),
 })
 
-function RoleOption({ active, icon: Icon, title, description, onClick, id }) {
+const GOOGLE_PATHS = [
+  ['#4285F4', 'M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'],
+  ['#34A853', 'M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'],
+  ['#FBBC05', 'M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z'],
+  ['#EA4335', 'M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'],
+]
+
+function GoogleIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      {GOOGLE_PATHS.map(([fill, d]) => <path key={fill} fill={fill} d={d} />)}
+    </svg>
+  )
+}
+
+function RoleOption({ active, icon: Icon, title, description, onClick, id, disabled }) {
   return (
     <button
       type="button"
       id={id}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         'flex min-h-28 flex-col items-start gap-2 rounded-lg border p-4 text-left transition-all',
         active
           ? 'border-primary bg-primary/10 text-primary shadow-sm'
-          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/40'
+          : 'border-border bg-background hover:border-primary/50 hover:bg-muted/40',
+        disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
       <Icon className="h-5 w-5" />
@@ -56,39 +72,40 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [showPassword, setShowPassword] = useState(false)
-  const [landlordVerifyPending, setLandlordVerifyPending] = useState(false)
+  const [step, setStep] = useState('register') // 'register' | 'select-role' | 'verify-email'
+  const [registeredUser, setRegisteredUser] = useState(null)
   const [pendingEmail, setPendingEmail] = useState('')
   const [apiError, setApiError] = useState('')
+  const [roleLoading, setRoleLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleTokenVal, setGoogleTokenVal] = useState('')
 
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
-    defaultValues: { role: 'student' },
   })
-
-  const selectedRole = watch('role')
 
   const onSubmit = async (data) => {
     setApiError('')
     try {
       const res = await registerApi(data)
-
-      if (res.data.data?.token) {
+      
+      // Nếu là Admin / User đầu tiên, backend đã trả về Token để đăng nhập trực tiếp
+      if (res.data?.data?.token) {
         dispatch(loginSuccess(res.data.data))
-        toast.success('Đăng ký thành công! Chào mừng bạn')
+        toast.success('Chào mừng Quản trị viên đầu tiên của hệ thống!')
         navigate('/')
         return
       }
 
-      if (res.data.data?.requireEmailVerification) {
-        setPendingEmail(data.email)
-        setLandlordVerifyPending(true)
-        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản')
+      const user = res.data.data?.user
+      if (user) {
+        setRegisteredUser(user)
+        setStep('select-role')
+        toast.success('Đăng ký thành công! Hãy chọn vai trò của bạn')
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Đăng ký thất bại'
@@ -97,10 +114,116 @@ export default function RegisterPage() {
     }
   }
 
+  const handleRoleSelect = async (role) => {
+    if (!registeredUser) return
+    setRoleLoading(true)
+    setApiError('')
+    try {
+      const res = await finalizeRoleApi({ email: registeredUser.email, role })
+
+      if (res.data.data?.token) {
+        dispatch(loginSuccess(res.data.data))
+        toast.success('Thiết lập vai trò thành công! Chào mừng bạn')
+        navigate('/')
+        return
+      }
+
+      if (res.data.data?.requireEmailVerification) {
+        setPendingEmail(registeredUser.email)
+        setStep('verify-email')
+        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản')
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Không thể thiết lập vai trò'
+      setApiError(message)
+      toast.error(message)
+    } finally {
+      setRoleLoading(false)
+    }
+  }
+
+  const handleGoogleRegister = () => {
+    setGoogleLoading(true)
+    setApiError('')
+
+    const initializeAndLogin = () => {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        scope: 'openid email profile',
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            try {
+              const res = await googleLoginApi({ accessToken: tokenResponse.access_token })
+              const { token, user } = res.data.data
+
+              if (user.role === 'unassigned') {
+                setRegisteredUser(user)
+                setGoogleTokenVal(token)
+                setStep('select-role')
+              } else {
+                dispatch(loginSuccess({ token, user }))
+                toast.success(`Chào mừng ${user.name}!`)
+                navigate('/', { replace: true })
+              }
+            } catch (err) {
+              const message = err.response?.data?.message || 'Đăng nhập Google thất bại'
+              setApiError(message)
+              toast.error(message)
+            } finally {
+              setGoogleLoading(false)
+            }
+          } else {
+            setGoogleLoading(false)
+            toast.error('Đăng nhập Google thất bại, vui lòng thử lại')
+          }
+        },
+        error_callback: (err) => {
+          setGoogleLoading(false)
+          console.error(err)
+          toast.error('Có lỗi xảy ra khi kết nối Google')
+        }
+      })
+      client.requestAccessToken()
+    }
+
+    if (window.google?.accounts?.oauth2) {
+      initializeAndLogin()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        if (window.google?.accounts?.oauth2) {
+          initializeAndLogin()
+        } else {
+          setGoogleLoading(false)
+          toast.error('Không thể tải thư viện xác thực Google')
+        }
+      }
+      script.onerror = () => {
+        setGoogleLoading(false)
+        toast.error('Không thể tải thư viện xác thực Google')
+      }
+      document.head.appendChild(script)
+    }
+  }
+
+  if (googleLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Đang kết nối tài khoản Google...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <AuthShell
       title="Tạo tài khoản"
-      description="Chọn vai trò phù hợp để bắt đầu tìm phòng hoặc quản lý tin đăng."
+      description="Tham gia Phòng Trọ TVU để bắt đầu trải nghiệm tốt nhất."
       asideTitle="Bắt đầu với tài khoản phù hợp cho nhu cầu của bạn."
       asideDescription="Sinh viên có thể lưu phòng và đặt lịch xem. Chủ trọ có thể đăng tin, quản lý lịch hẹn và trao đổi với người thuê."
       asideItems={[
@@ -113,7 +236,7 @@ export default function RegisterPage() {
       footerLinkTo="/login"
       className="items-start pt-4 sm:pt-8 lg:items-center lg:pt-2"
     >
-      {landlordVerifyPending ? (
+      {step === 'verify-email' && (
         <AuthStatusCard
           icon={Mail}
           tone="primary"
@@ -131,35 +254,78 @@ export default function RegisterPage() {
             <Link to="/login">Quay lại đăng nhập</Link>
           </Button>
         </AuthStatusCard>
-      ) : (
+      )}
+
+      {step === 'select-role' && (
+        <AuthCard
+          icon={Building2}
+          title="Bạn tham gia với vai trò"
+          description="Vui lòng chọn vai trò để hệ thống cung cấp giao diện phù hợp nhất."
+        >
+          <div className="space-y-6 px-6 py-6">
+            {apiError && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <RoleOption
+                id="role-student"
+                active={false}
+                icon={GraduationCap}
+                title="Sinh viên / Người thuê"
+                description="Tìm phòng nhanh chóng quanh TVU, lưu tin yêu thích và đặt lịch hẹn xem phòng."
+                onClick={() => handleRoleSelect('student')}
+                disabled={roleLoading}
+              />
+              <RoleOption
+                id="role-landlord"
+                active={false}
+                icon={Building2}
+                title="Chủ trọ / Người cho thuê"
+                description="Đăng tin cho thuê phòng trọ miễn phí, quản lý lịch hẹn trực tuyến."
+                onClick={() => handleRoleSelect('landlord')}
+                disabled={roleLoading}
+              />
+            </div>
+
+            {roleLoading && (
+              <p className="text-center text-xs text-muted-foreground animate-pulse font-medium">
+                Đang thiết lập vai trò tài khoản, vui lòng đợi...
+              </p>
+            )}
+          </div>
+        </AuthCard>
+      )}
+
+      {step === 'register' && (
         <AuthCard
           icon={ShieldCheck}
           title="Tạo tài khoản"
-          description="Thông tin này giúp hệ thống cá nhân hóa trải nghiệm và bảo vệ tài khoản của bạn."
+          description="Thông tin này giúp hệ thống bảo vệ tài khoản của bạn."
         >
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Bạn tham gia với vai trò</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <RoleOption
-                    id="role-student"
-                    active={selectedRole === 'student'}
-                    icon={GraduationCap}
-                    title="Sinh viên / Người thuê"
-                    description="Tìm phòng, lưu tin yêu thích và đặt lịch xem phòng."
-                    onClick={() => setValue('role', 'student', { shouldValidate: true })}
-                  />
-                  <RoleOption
-                    id="role-landlord"
-                    active={selectedRole === 'landlord'}
-                    icon={Building2}
-                    title="Chủ trọ"
-                    description="Đăng tin và quản lý phòng cho thuê."
-                    onClick={() => setValue('role', 'landlord', { shouldValidate: true })}
-                  />
+              <Button
+                id="btn-google-register"
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-lg"
+                onClick={handleGoogleRegister}
+              >
+                <GoogleIcon className="h-4 w-4" />
+                Đăng ký với Google
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
                 </div>
-                {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Hoặc dùng email</span>
+                </div>
               </div>
 
               {apiError && (
@@ -221,14 +387,11 @@ export default function RegisterPage() {
               </FormField>
             </CardContent>
 
-            <CardFooter className="flex flex-col gap-4">
+            <CardContent className="pt-0">
               <SubmitButton id="btn-register-submit" loading={isSubmitting} loadingText="Đang tạo tài khoản...">
                 Đăng ký
               </SubmitButton>
-              <p className="text-center text-sm text-muted-foreground">
-                Chủ trọ cần xác thực email trước khi đăng tin.
-              </p>
-            </CardFooter>
+            </CardContent>
           </form>
         </AuthCard>
       )}

@@ -33,8 +33,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'landlord', 'admin'],
-      default: 'student',
+      enum: ['student', 'landlord', 'admin', 'unassigned'],
+      default: 'unassigned',
     },
     avatar: {
       type: String,

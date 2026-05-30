@@ -3,6 +3,7 @@ const router = express.Router()
 const { authenticate } = require('../middlewares/auth')
 const {
   register,
+  finalizeRole,
   login,
   logout,
   getMe,
@@ -11,15 +12,18 @@ const {
   resetPassword,
   googleRedirect,
   googleCallback,
+  googleLoginApi,
 } = require('../controllers/authController')
 
 // Public routes
 router.post('/register', register)
+router.post('/finalize-role', finalizeRole)
 router.post('/login', login)
 router.post('/logout', logout)
 router.get('/verify-email/:token', verifyEmail)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
+router.post('/google', googleLoginApi)
 
 // Google OAuth2 — backend redirect flow
 router.get('/google', googleRedirect)

@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils'
 const NAV_LINKS = [
   { to: '/', label: 'Trang chủ', exact: true, icon: null },
   { to: '/search', label: 'Tìm phòng', icon: Search },
-  { to: '/recommend', label: 'Gợi ý AI', icon: Sparkles },
+  { to: '/recommend', label: 'Gợi ý', icon: Sparkles },
 ]
 const LANDLORD_MENU = [
   { to: '/landlord/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
@@ -176,16 +176,16 @@ export function Navbar() {
 
   const mobileQuickLinks = isAuth
     ? [
-        { to: '/favorites', icon: Heart, label: 'Yêu thích' },
-        { to: '/appointments', icon: Calendar, label: 'Lịch hẹn' },
-        { to: '/messages', icon: MessageCircle, label: 'Tin nhắn', badge: unreadMsgs > 0 ? unreadMsgs : null },
-        ...(user?.role === 'landlord' ? [
-          { to: '/landlord/dashboard', icon: LayoutDashboard, label: 'Tổng quan chủ trọ' },
-          { to: '/landlord/rooms', icon: Building2, label: 'Phòng trọ của tôi' },
-          { to: '/landlord/appointments', icon: Calendar, label: 'Quản lý lịch hẹn' },
-        ] : []),
-        ...(user?.role === 'admin' ? [{ to: '/admin', icon: Shield, label: 'Quản trị hệ thống' }] : []),
-      ]
+      { to: '/favorites', icon: Heart, label: 'Yêu thích' },
+      { to: '/appointments', icon: Calendar, label: 'Lịch hẹn' },
+      { to: '/messages', icon: MessageCircle, label: 'Tin nhắn', badge: unreadMsgs > 0 ? unreadMsgs : null },
+      ...(user?.role === 'landlord' ? [
+        { to: '/landlord/dashboard', icon: LayoutDashboard, label: 'Tổng quan chủ trọ' },
+        { to: '/landlord/rooms', icon: Building2, label: 'Phòng trọ của tôi' },
+        { to: '/landlord/appointments', icon: Calendar, label: 'Quản lý lịch hẹn' },
+      ] : []),
+      ...(user?.role === 'admin' ? [{ to: '/admin', icon: Shield, label: 'Quản trị hệ thống' }] : []),
+    ]
     : []
 
   return (

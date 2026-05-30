@@ -3,6 +3,9 @@ import axiosInstance from '@/services/axiosInstance'
 // Đăng ký tài khoản
 export const registerApi = (data) => axiosInstance.post('/api/auth/register', data)
 
+// Chọn vai trò sau khi đăng ký thành công
+export const finalizeRoleApi = (data) => axiosInstance.post('/api/auth/finalize-role', data)
+
 // Đăng nhập
 export const loginApi = (data) => axiosInstance.post('/api/auth/login', data)
 
@@ -22,3 +25,6 @@ export const verifyEmailApi = (token) => axiosInstance.get(`/api/auth/verify-ema
 
 // Lấy thông tin user hiện tại
 export const getMeApi = () => axiosInstance.get('/api/auth/me')
+
+// Đăng nhập/Đăng ký Google qua credential hoặc accessToken
+export const googleLoginApi = (data) => axiosInstance.post('/api/auth/google', data)

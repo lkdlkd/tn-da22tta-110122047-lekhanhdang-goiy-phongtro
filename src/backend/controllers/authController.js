@@ -40,8 +40,7 @@ async function generateUsername(email) {
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body
-    const userRole = role || 'student'
+    const { name, email, password } = req.body
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
@@ -50,41 +49,86 @@ exports.register = async (req, res) => {
 
     const username = await generateUsername(email)
 
-    // Sinh viên: tự động xác thực, đăng nhập luôn
-    if (userRole === 'student') {
-      const user = await User.create({
-        name,
-        username,
-        email,
-        password,
-        role: 'student',
-        isEmailVerified: true,
-      })
+    // Check if this is the very first user in the database
+    const isFirstUser = (await User.countDocuments({})) === 0
+    const userRole = isFirstUser ? 'admin' : 'unassigned'
+    const isVerified = isFirstUser ? true : false
+
+    const user = await User.create({
+      name,
+      username,
+      email,
+      password,
+      role: userRole,
+      isEmailVerified: isVerified,
+    })
+
+    if (isFirstUser) {
       return createSendToken(user, 201, res)
     }
 
-    // Chủ trọ: cần xác minh email trước khi sử dụng
-    const user = await User.create({ name, username, email, password, role: 'landlord' })
+    sendResponse(res, 201, true, 'Đăng ký bước 1 thành công! Vui lòng chọn vai trò.', {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    })
+  } catch (error) {
+    sendResponse(res, 500, false, error.message)
+  }
+}
 
+// POST /api/auth/finalize-role
+exports.finalizeRole = async (req, res) => {
+  try {
+    const { email, role } = req.body
+
+    if (!email || !role) {
+      return sendResponse(res, 400, false, 'Vui lòng cung cấp đầy đủ email và vai trò')
+    }
+
+    if (!['student', 'landlord'].includes(role)) {
+      return sendResponse(res, 400, false, 'Vai trò không hợp lệ')
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+    if (!user) {
+      return sendResponse(res, 404, false, 'Không tìm thấy người dùng')
+    }
+
+    if (user.role !== 'unassigned') {
+      return sendResponse(res, 400, false, 'Tài khoản này đã có vai trò')
+    }
+
+    user.role = role
+
+    // Nếu đăng ký qua Google HOẶC chọn vai trò là sinh viên: tự động xác thực và đăng nhập luôn
+    if (user.googleId || role === 'student') {
+      user.isEmailVerified = true
+      await user.save()
+      return createSendToken(user, 201, res)
+    }
+
+    // Chủ trọ đăng ký thường: cần xác minh email trước khi sử dụng
     const verifyToken = user.createEmailVerifyToken()
     await user.save({ validateBeforeSave: false })
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: '✅ Xác thực email — PhòngTrọ VL',
-        html: `<p>Chào ${user.name},</p>
-               <p>Cảm ơn bạn đã đăng ký tài khoản <strong>Chủ trọ</strong>.</p>
-               <p>Vui lòng <a href="${verifyUrl}">click vào đây</a> để xác thực email và bắt đầu đăng tin phòng trọ.</p>
-               <p>Link có hiệu lực trong <strong>24 giờ</strong>.</p>`,
-      })
-    } catch (emailErr) {
-      await User.findByIdAndDelete(user._id)
-      return sendResponse(res, 500, false, 'Không thể gửi email xác thực. Vui lòng thử lại.')
-    }
+    // Gửi email xác thực trong background, tránh block API dẫn đến timeout
+    sendEmail({
+      to: user.email,
+      subject: '✅ Xác thực email — PhòngTrọ VL',
+      html: `<p>Chào ${user.name},</p>
+             <p>Cảm ơn bạn đã đăng ký tài khoản <strong>Chủ trọ</strong>.</p>
+             <p>Vui lòng <a href="${verifyUrl}">click vào đây</a> để xác thực email và bắt đầu đăng tin phòng trọ.</p>
+             <p>Link có hiệu lực trong <strong>24 giờ</strong>.</p>`,
+    }).catch((emailErr) => {
+      console.error('Không thể gửi email xác thực trong background:', emailErr.message)
+    })
 
-    sendResponse(res, 201, true, 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản chủ trọ.', {
+    sendResponse(res, 200, true, 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản chủ trọ.', {
       requireEmailVerification: true,
     })
   } catch (error) {
@@ -108,6 +152,10 @@ exports.login = async (req, res) => {
 
     if (user.isBanned) {
       return sendResponse(res, 403, false, 'Tài khoản của bạn đã bị khoá')
+    }
+
+    if (!user.isEmailVerified) {
+      return sendResponse(res, 403, false, 'Tài khoản của bạn chưa được xác thực email. Vui lòng kiểm tra hộp thư để xác thực.')
     }
 
     createSendToken(user, 200, res)
@@ -173,10 +221,13 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false })
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
-    await sendEmail({
+    // Gửi email đặt lại mật khẩu trong background, tránh block API dẫn đến timeout
+    sendEmail({
       to: user.email,
       subject: '🔑 Đặt lại mật khẩu — PhòngTrọ VL',
       html: `<p>Chào ${user.name},</p><p>Vui lòng <a href="${resetUrl}">click vào đây</a> để đặt lại mật khẩu. Link có hiệu lực trong 1 giờ.</p>`,
+    }).catch((emailErr) => {
+      console.error('Không thể gửi email đặt lại mật khẩu trong background:', emailErr.message)
     })
 
     sendResponse(res, 200, true, 'Email đặt lại mật khẩu đã được gửi')
@@ -219,9 +270,8 @@ const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost
 
 const FRONTEND_URL = process.env.FRONTEND_URL
 
-// GET /api/auth/google?role=student|landlord — redirect to Google consent
+// GET /api/auth/google — redirect to Google consent
 exports.googleRedirect = (req, res) => {
-  const role = ['student', 'landlord'].includes(req.query.role) ? req.query.role : 'student'
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: GOOGLE_CALLBACK_URL,
@@ -229,7 +279,6 @@ exports.googleRedirect = (req, res) => {
     scope: 'openid email profile',
     access_type: 'offline',
     prompt: 'select_account',
-    state: role,  // carry role through OAuth round-trip
   })
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
 }
@@ -237,11 +286,8 @@ exports.googleRedirect = (req, res) => {
 // GET /api/auth/google/callback — exchange code → upsert user → redirect FE
 exports.googleCallback = async (req, res) => {
   try {
-    const { code, state } = req.query
+    const { code } = req.query
     if (!code) return res.redirect(`${FRONTEND_URL}/login?error=google_failed`)
-
-    // Role from state (set during redirect); fallback to student
-    const chosenRole = ['student', 'landlord'].includes(state) ? state : 'student'
 
     // Exchange code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -270,14 +316,17 @@ exports.googleCallback = async (req, res) => {
     // Upsert user
     let user = await User.findOne({ email })
     if (!user) {
-      // Brand-new user — use chosenRole from state
+      // Check if this is the very first user in the database
+      const isFirstUser = (await User.countDocuments({})) === 0
+      const userRole = isFirstUser ? 'admin' : 'unassigned'
+
       const username = await generateUsername(email)
       user = await User.create({
         name: name || email.split('@')[0],
         email,
         username,
         avatar: picture || '',
-        role: chosenRole,
+        role: userRole,
         isEmailVerified: true,
         googleId,
         password: crypto.randomBytes(20).toString('hex'),
@@ -289,7 +338,6 @@ exports.googleCallback = async (req, res) => {
       user.isEmailVerified = true
       await user.save()
     }
-    // Existing Google users: role is NOT changed (they chose once at sign-up)
 
     const token = signToken(user._id)
     res.redirect(`${FRONTEND_URL}/login?token=${token}`)
@@ -298,3 +346,91 @@ exports.googleCallback = async (req, res) => {
     res.redirect(`${FRONTEND_URL}/login?error=google_failed`)
   }
 }
+
+// POST /api/auth/google — authenticate using Google Credential (ID Token) or Access Token
+exports.googleLoginApi = async (req, res) => {
+  try {
+    const { credential, accessToken } = req.body
+
+    if (!credential && !accessToken) {
+      return sendResponse(res, 400, false, 'Thiếu thông tin xác thực Google (credential hoặc accessToken)')
+    }
+
+    let email, name, picture, googleId
+
+    if (credential) {
+      // 1. Xác thực bằng ID Token (credential)
+      const { OAuth2Client } = require('google-auth-library')
+      const client = new OAuth2Client(GOOGLE_CLIENT_ID)
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID,
+      })
+      const payload = ticket.getPayload()
+      email = payload.email
+      name = payload.name
+      picture = payload.picture
+      googleId = payload.sub
+    } else if (accessToken) {
+      // 2. Xác thực bằng Access Token thông qua API Google UserInfo
+      const axios = require('axios')
+      const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`)
+      const payload = response.data
+      email = payload.email
+      name = payload.name
+      picture = payload.picture
+      googleId = payload.sub
+    }
+
+    if (!email) {
+      return sendResponse(res, 400, false, 'Không thể lấy thông tin email từ tài khoản Google')
+    }
+
+    // Upsert user
+    let user = await User.findOne({ email })
+    if (!user) {
+      // Check if this is the very first user in the database
+      const isFirstUser = (await User.countDocuments({})) === 0
+      const userRole = isFirstUser ? 'admin' : 'unassigned'
+
+      const username = await generateUsername(email)
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        username,
+        avatar: picture || '',
+        role: userRole,
+        isEmailVerified: true,
+        googleId,
+        password: crypto.randomBytes(20).toString('hex'),
+      })
+    } else {
+      let isUpdated = false
+      if (!user.googleId) {
+        user.googleId = googleId
+        isUpdated = true
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture
+        isUpdated = true
+      }
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true
+        isUpdated = true
+      }
+      if (isUpdated) {
+        await user.save()
+      }
+    }
+
+    if (user.isBanned) {
+      return sendResponse(res, 403, false, 'Tài khoản của bạn đã bị khoá')
+    }
+
+    createSendToken(user, 200, res)
+  } catch (error) {
+    console.error('Google API Login Error:', error)
+    sendResponse(res, 401, false, 'Xác thực tài khoản Google thất bại: ' + error.message)
+  }
+}
+

@@ -5,12 +5,12 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast } from 'sonner'
-import { loginApi, getMeApi } from '@/services/authService'
+import { loginApi, getMeApi, finalizeRoleApi, googleLoginApi } from '@/services/authService'
 import { loginStart, loginSuccess, loginFailure } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CardContent, CardFooter } from '@/components/ui/card'
-import { AlertCircle, Building2, GraduationCap, Loader2, Mail, MapPinned, Search, Sparkles, X } from 'lucide-react'
+import { AlertCircle, Building2, GraduationCap, Loader2, Mail, MapPinned, Search, Sparkles } from 'lucide-react'
 import {
   AuthCard,
   AuthShell,
@@ -48,80 +48,19 @@ function GoogleIcon({ className }) {
   )
 }
 
-function RolePickerModal({ onSelect, onClose }) {
-  const roles = [
-    {
-      key: 'student',
-      icon: GraduationCap,
-      title: 'Sinh viên',
-      desc: 'Lưu phòng yêu thích, nhận gợi ý và đặt lịch xem phòng.',
-      className: 'border-blue-200 bg-blue-50/70 text-blue-700 hover:border-blue-400 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300',
-    },
-    {
-      key: 'landlord',
-      icon: Building2,
-      title: 'Chủ trọ',
-      desc: 'Đăng tin, quản lý phòng và trao đổi với người thuê.',
-      className: 'border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:border-emerald-400 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300',
-    },
-  ]
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-md rounded-xl border bg-background p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute right-3 top-3 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Đóng"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        <div className="mb-5 flex items-start gap-3 pr-8">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card">
-            <GoogleIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight">Tiếp tục với Google</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Chọn vai trò để hệ thống mở đúng trải nghiệm cho bạn.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {roles.map(({ key, icon: Icon, title, desc, className }) => (
-            <button
-              key={key}
-              id={`google-role-${key}`}
-              onClick={() => onSelect(key)}
-              className={cn('flex min-h-36 flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all hover:shadow-sm', className)}
-            >
-              <Icon className="h-6 w-6" />
-              <span className="text-sm font-semibold leading-tight">{title}</span>
-              <span className="text-xs leading-relaxed text-muted-foreground">{desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function LoginPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [searchParams] = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [showRolePicker, setShowRolePicker] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // Quy trình gán vai trò của Google
+  const [step, setStep] = useState('login') // 'login' | 'select-role'
+  const [googleUser, setGoogleUser] = useState(null)
+  const [googleTokenVal, setGoogleTokenVal] = useState('')
+  const [roleLoading, setRoleLoading] = useState(false)
 
   const {
     register,
@@ -147,9 +86,17 @@ export default function LoginPage() {
         const res = await getMeApi()
         const user = res.data?.data?.user
         if (!user) throw new Error()
-        dispatch(loginSuccess({ token, user }))
-        toast.success(`Chào mừng ${user.name}!`)
-        navigate('/', { replace: true })
+
+        // Nếu người dùng Google mới đăng ký và chưa chọn vai trò
+        if (user.role === 'unassigned') {
+          setGoogleUser(user)
+          setGoogleTokenVal(token)
+          setStep('select-role')
+        } else {
+          dispatch(loginSuccess({ token, user }))
+          toast.success(`Chào mừng ${user.name}!`)
+          navigate('/', { replace: true })
+        }
       } catch {
         localStorage.removeItem('token')
         toast.error('Đăng nhập Google thất bại')
@@ -177,9 +124,93 @@ export default function LoginPage() {
     }
   }
 
-  const handleRoleSelect = (role) => {
-    setShowRolePicker(false)
-    window.location.href = `${BACKEND_URL}/auth/google?role=${role}`
+  const handleRoleSelect = async (role) => {
+    if (!googleUser || !googleTokenVal) return
+    setRoleLoading(true)
+    setApiError('')
+    try {
+      await finalizeRoleApi({ email: googleUser.email, role })
+
+      // Do tài khoản Google đã được kích hoạt email sẵn từ trước, 
+      // hệ thống chỉ việc cấp quyền truy cập trực tiếp
+      const finalUser = { ...googleUser, role }
+      dispatch(loginSuccess({ token: googleTokenVal, user: finalUser }))
+      toast.success('Thiết lập vai trò thành công! Chào mừng bạn')
+      navigate('/')
+    } catch (err) {
+      const message = err.response?.data?.message || 'Không thể thiết lập vai trò'
+      setApiError(message)
+      toast.error(message)
+    } finally {
+      setRoleLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = () => {
+    setGoogleLoading(true)
+    setApiError('')
+
+    const initializeAndLogin = () => {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        scope: 'openid email profile',
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            try {
+              const res = await googleLoginApi({ accessToken: tokenResponse.access_token })
+              const { token, user } = res.data.data
+
+              if (user.role === 'unassigned') {
+                setGoogleUser(user)
+                setGoogleTokenVal(token)
+                setStep('select-role')
+              } else {
+                dispatch(loginSuccess({ token, user }))
+                toast.success(`Chào mừng ${user.name}!`)
+                navigate('/', { replace: true })
+              }
+            } catch (err) {
+              const message = err.response?.data?.message || 'Đăng nhập Google thất bại'
+              setApiError(message)
+              toast.error(message)
+            } finally {
+              setGoogleLoading(false)
+            }
+          } else {
+            setGoogleLoading(false)
+            toast.error('Đăng nhập Google thất bại, vui lòng thử lại')
+          }
+        },
+        error_callback: (err) => {
+          setGoogleLoading(false)
+          console.error(err)
+          toast.error('Có lỗi xảy ra khi kết nối Google')
+        }
+      })
+      client.requestAccessToken()
+    }
+
+    if (window.google?.accounts?.oauth2) {
+      initializeAndLogin()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        if (window.google?.accounts?.oauth2) {
+          initializeAndLogin()
+        } else {
+          setGoogleLoading(false)
+          toast.error('Không thể tải thư viện xác thực Google')
+        }
+      }
+      script.onerror = () => {
+        setGoogleLoading(false)
+        toast.error('Không thể tải thư viện xác thực Google')
+      }
+      document.head.appendChild(script)
+    }
   }
 
   if (googleLoading) {
@@ -187,7 +218,7 @@ export default function LoginPage() {
       <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm">Đang đăng nhập với Google...</p>
+          <p className="text-sm">Đang kết nối tài khoản Google...</p>
         </div>
       </div>
     )
@@ -195,49 +226,24 @@ export default function LoginPage() {
 
   return (
     <>
-      {showRolePicker && <RolePickerModal onSelect={handleRoleSelect} onClose={() => setShowRolePicker(false)} />}
-
-      <AuthShell
-        title="Chào mừng bạn trở lại"
-        description="Đăng nhập để lưu phòng, đặt lịch xem và nhận gợi ý phù hợp hơn."
-        asideTitle="Đăng nhập để tiếp tục hành trình tìm phòng phù hợp."
-        asideDescription="Một tài khoản giúp bạn quản lý phòng yêu thích, lịch hẹn, tin nhắn và các đề xuất cá nhân hóa."
-        asideItems={[
-          { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
-          { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
-          { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
-        ]}
-        footerPrompt="Chưa có tài khoản?"
-        footerLinkText="Đăng ký"
-        footerLinkTo="/register"
-      >
-        <AuthCard
-          icon={Mail}
-          title="Đăng nhập"
-          description="Nhập thông tin tài khoản Phòng Trọ TVU của bạn."
+      {step === 'select-role' ? (
+        <AuthShell
+          title="Chọn vai trò của bạn"
+          description="Để bắt đầu, hãy chọn vai trò phù hợp nhất với nhu cầu của bạn."
+          asideTitle="Chào mừng bạn đến với Phòng Trọ TVU."
+          asideDescription="Để tiếp tục sử dụng dịch vụ bằng tài khoản Google, hãy xác định vai trò của bạn."
+          asideItems={[
+            { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
+            { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
+            { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
+          ]}
         >
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-5">
-              <Button
-                id="btn-google-login"
-                type="button"
-                variant="outline"
-                className="h-11 w-full rounded-lg"
-                onClick={() => setShowRolePicker(true)}
-              >
-                <GoogleIcon className="h-4 w-4" />
-                Đăng nhập với Google
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Hoặc dùng email</span>
-                </div>
-              </div>
-
+          <AuthCard
+            icon={Building2}
+            title="Bạn tham gia với vai trò"
+            description="Lựa chọn vai trò phù hợp để hệ thống thiết lập bảng điều khiển cho bạn."
+          >
+            <div className="space-y-6 px-6 py-6">
               {apiError && (
                 <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
@@ -245,51 +251,138 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <FormField id="login-email" label="Email" error={errors.email?.message}>
-                <Input
-                  id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="example@email.com"
-                  className={cn(
-                    'h-11 rounded-lg transition-all duration-300',
-                    errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
-                  )}
-                  {...register('email')}
-                />
-              </FormField>
-
-              <PasswordField
-                id="login-password"
-                label="Mật khẩu"
-                autoComplete="current-password"
-                register={register('password')}
-                error={errors.password?.message}
-                show={showPassword}
-                onToggle={() => setShowPassword((value) => !value)}
-              />
-
-              <div className="flex justify-end">
-                <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
-                  Quên mật khẩu?
-                </Link>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  id="google-role-student"
+                  onClick={() => handleRoleSelect('student')}
+                  disabled={roleLoading}
+                  className="flex min-h-28 flex-col items-start gap-2 rounded-lg border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
+                >
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-semibold">Sinh viên / Người thuê</span>
+                  <span className="text-xs leading-relaxed text-muted-foreground">
+                    Tìm phòng trọ, lưu danh sách yêu thích và đặt lịch hẹn xem.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  id="google-role-landlord"
+                  onClick={() => handleRoleSelect('landlord')}
+                  disabled={roleLoading}
+                  className="flex min-h-28 flex-col items-start gap-2 rounded-lg border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
+                >
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-semibold">Chủ trọ / Cho thuê</span>
+                  <span className="text-xs leading-relaxed text-muted-foreground">
+                    Đăng tin cho thuê phòng, quản lý các cuộc hẹn liên hệ.
+                  </span>
+                </button>
               </div>
-            </CardContent>
 
-            <CardFooter className="flex flex-col gap-4">
-              <SubmitButton id="btn-login-submit" loading={isSubmitting} loadingText="Đang đăng nhập...">
-                Đăng nhập
-              </SubmitButton>
-              <p className="text-center text-sm text-muted-foreground">
-                Bạn là chủ trọ?{' '}
-                <Link to="/register" className="font-semibold text-primary hover:underline">
-                  Tạo tài khoản để đăng phòng
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        </AuthCard>
-      </AuthShell>
+              {roleLoading && (
+                <p className="text-center text-xs text-muted-foreground animate-pulse font-medium">
+                  Đang thiết lập vai trò tài khoản, vui lòng đợi...
+                </p>
+              )}
+            </div>
+          </AuthCard>
+        </AuthShell>
+      ) : (
+        <AuthShell
+          title="Chào mừng bạn trở lại"
+          description="Đăng nhập để lưu phòng, đặt lịch xem và nhận gợi ý phù hợp hơn."
+          asideTitle="Đăng nhập để tiếp tục hành trình tìm phòng phù hợp."
+          asideDescription="Một tài khoản giúp bạn quản lý phòng yêu thích, lịch hẹn, tin nhắn và các đề xuất cá nhân hóa."
+          asideItems={[
+            { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
+            { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
+            { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
+          ]}
+          footerPrompt="Chưa có tài khoản?"
+          footerLinkText="Đăng ký"
+          footerLinkTo="/register"
+        >
+          <AuthCard
+            icon={Mail}
+            title="Đăng nhập"
+            description="Nhập thông tin tài khoản Phòng Trọ TVU của bạn."
+          >
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <CardContent className="space-y-5">
+                <Button
+                  id="btn-google-login"
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-lg"
+                  onClick={handleGoogleLogin}
+                >
+                  <GoogleIcon className="h-4 w-4" />
+                  Đăng nhập với Google
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">Hoặc dùng email</span>
+                  </div>
+                </div>
+
+                {apiError && (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                    <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
+                  </div>
+                )}
+
+                <FormField id="login-email" label="Email" error={errors.email?.message}>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="example@email.com"
+                    className={cn(
+                      'h-11 rounded-lg transition-all duration-300',
+                      errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
+                    )}
+                    {...register('email')}
+                  />
+                </FormField>
+
+                <PasswordField
+                  id="login-password"
+                  label="Mật khẩu"
+                  autoComplete="current-password"
+                  register={register('password')}
+                  error={errors.password?.message}
+                  show={showPassword}
+                  onToggle={() => setShowPassword((value) => !value)}
+                />
+
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                    Quên mật khẩu?
+                  </Link>
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex flex-col gap-4">
+                <SubmitButton id="btn-login-submit" loading={isSubmitting} loadingText="Đang đăng nhập...">
+                  Đăng nhập
+                </SubmitButton>
+                <p className="text-center text-sm text-muted-foreground">
+                  Bạn là chủ trọ?{' '}
+                  <Link to="/register" className="font-semibold text-primary hover:underline">
+                    Tạo tài khoản để đăng phòng
+                  </Link>
+                </p>
+              </CardFooter>
+            </form>
+          </AuthCard>
+        </AuthShell>
+      )}
     </>
   )
 }
