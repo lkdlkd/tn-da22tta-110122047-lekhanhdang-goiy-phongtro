@@ -676,8 +676,12 @@ export default function RoomDetailPage() {
               <Card>
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-center gap-3">
-                    <Link to={`/landlord/${room.landlord.username || room.landlord._id}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-muted text-sm font-bold">
-                      {(room.landlord.name || 'C')[0].toUpperCase()}
+                    <Link to={`/landlord/${room.landlord.username || room.landlord._id}`} className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-bold">
+                      {room.landlord.avatar ? (
+                        <img src={room.landlord.avatar} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (room.landlord.name || 'C')[0].toUpperCase()
+                      )}
                     </Link>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Chủ trọ</p>

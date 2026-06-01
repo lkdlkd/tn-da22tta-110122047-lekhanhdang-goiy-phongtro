@@ -135,10 +135,16 @@ export default function LandlordDashboardPage() {
     }
   }, [rooms, appointments, conversations])
 
-  const pendingAppointments = useMemo(
-    () => appointments.filter((appt) => appt.status === 'pending').slice(0, 5),
-    [appointments]
-  )
+  const pendingAppointments = useMemo(() => {
+    return appointments
+      .filter((appt) => {
+        if (appt.status !== 'pending') return false
+        const createdByUserId = appt.createdBy?._id || appt.createdBy
+        const isStudentCreator = !createdByUserId || String(createdByUserId) === String(appt.student?._id || appt.student)
+        return isStudentCreator
+      })
+      .slice(0, 5)
+  }, [appointments])
 
   const topRooms = useMemo(
     () => [...rooms].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 4),

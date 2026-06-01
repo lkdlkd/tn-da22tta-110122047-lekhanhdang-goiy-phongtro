@@ -13,6 +13,7 @@ const TIME_SLOT_LABELS = {
 }
 
 // POST /api/appointments — Sinh viên đặt lịch
+// POST /api/appointments — Sinh viên hoặc Chủ trọ/Admin đặt đề xuất lịch hẹn
 exports.createAppointment = async (req, res) => {
   try {
     const { roomId, date, timeSlot, note, conversationId } = req.body
@@ -25,13 +26,32 @@ exports.createAppointment = async (req, res) => {
     const room = await Room.findById(roomId).populate('landlord', '_id name')
     if (!room) return sendResponse(res, 404, false, 'Không tìm thấy phòng')
 
+    let studentId;
+    let landlordId = room.landlord._id;
+
+    if (req.user.role === 'student') {
+      studentId = req.user._id;
+    } else {
+      // Đang là landlord hoặc admin tạo lịch hẹn. Cần có conversationId để tìm ra đối tác chat (studentId)
+      if (!conversationId || !mongoose.isValidObjectId(conversationId)) {
+        return sendResponse(res, 400, false, 'Yêu cầu cuộc hội thoại hợp lệ để đề xuất lịch hẹn')
+      }
+      const conv = await Conversation.findById(conversationId)
+      if (!conv) return sendResponse(res, 404, false, 'Không tìm thấy cuộc hội thoại')
+      
+      // Tìm người tham gia khác (không phải req.user._id)
+      studentId = conv.participants.find(p => String(p) !== String(req.user._id))
+      if (!studentId) return sendResponse(res, 400, false, 'Không xác định được sinh viên trong cuộc hội thoại')
+    }
+
     const appointment = await Appointment.create({
       room: roomId,
-      student: req.user._id,
-      landlord: room.landlord._id,
+      student: studentId,
+      landlord: landlordId,
       date: appointDate,
       timeSlot,
       note: note?.trim() || '',
+      createdBy: req.user._id,
     })
 
     // ── Tạo message card 'appointment' trong chat nếu có conversationId ──
@@ -60,17 +80,25 @@ exports.createAppointment = async (req, res) => {
       }
     }
 
-    // Notify chủ trọ
+    // Gửi thông báo đến bên còn lại
+    const isStudent = String(studentId) === String(req.user._id)
+    const targetUserId = isStudent ? landlordId : studentId
+    const targetTitle = isStudent ? 'Có lịch hẹn xem phòng mới' : 'Có đề xuất lịch hẹn mới'
+    const targetBody = isStudent
+      ? `${req.user.name} muốn xem phòng "${room.title}" vào ${TIME_SLOT_LABELS[timeSlot]} ngày ${appointDate.toLocaleDateString('vi-VN')}`
+      : `Chủ trọ ${req.user.name} đã đề xuất lịch xem phòng "${room.title}" vào ${TIME_SLOT_LABELS[timeSlot]} ngày ${appointDate.toLocaleDateString('vi-VN')}`
+    const targetLink = isStudent ? '/landlord/appointments' : '/appointments'
+
     await createNotification({
-      userId: room.landlord._id,
+      userId: targetUserId,
       type: 'system',
-      title: 'Có lịch hẹn xem phòng mới',
-      body: `${req.user.name} muốn xem phòng "${room.title}" vào ${TIME_SLOT_LABELS[timeSlot]} ngày ${new Date(date).toLocaleDateString('vi-VN')}`,
-      link: '/landlord/appointments',
+      title: targetTitle,
+      body: targetBody,
+      link: targetLink,
       io,
     })
 
-    return sendResponse(res, 201, true, 'Đặt lịch thành công', { appointment })
+    return sendResponse(res, 201, true, 'Tạo đề xuất lịch hẹn thành công', { appointment })
   } catch (error) {
     return sendResponse(res, 500, false, error.message)
   }
@@ -98,24 +126,47 @@ exports.getAppointments = async (req, res) => {
 }
 
 // PUT /api/appointments/:id/confirm — Chủ trọ xác nhận
+// PUT /api/appointments/:id/confirm — Xác nhận lịch hẹn (Xác nhận chéo dựa trên người tạo)
 exports.confirmAppointment = async (req, res) => {
   try {
     const appt = await Appointment.findById(req.params.id).populate('room', 'title')
     if (!appt) return sendResponse(res, 404, false, 'Không tìm thấy lịch hẹn')
-    if (String(appt.landlord) !== String(req.user._id)) return sendResponse(res, 403, false, 'Không có quyền')
+
+    // Xác định ai là người tạo
+    const createdByStr = appt.createdBy ? String(appt.createdBy) : String(appt.student)
+    const isCreatedByStudent = createdByStr === String(appt.student)
+
+    // Nếu sinh viên tạo -> Chủ trọ phải là người xác nhận
+    // Nếu chủ trọ tạo -> Sinh viên phải là người xác nhận
+    if (isCreatedByStudent) {
+      if (String(appt.landlord) !== String(req.user._id)) {
+        return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ chủ trọ mới có quyền xác nhận)')
+      }
+    } else {
+      if (String(appt.student) !== String(req.user._id)) {
+        return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ sinh viên mới có quyền xác nhận)')
+      }
+    }
 
     appt.status = 'confirmed'
     await appt.save()
 
     const io = req.app.get('io')
 
-    // Notify sinh viên
+    // Notify người tạo (hoặc bên kia)
+    const notifyUserId = isCreatedByStudent ? appt.student : appt.landlord
+    const notifyTitle = 'Lịch hẹn đã được xác nhận'
+    const notifyBody = isCreatedByStudent
+      ? `Chủ trọ đã xác nhận lịch hẹn xem phòng "${appt.room.title}" của bạn.`
+      : `Người thuê đã đồng ý và xác nhận lịch hẹn xem phòng "${appt.room.title}" của bạn.`
+    const notifyLink = isCreatedByStudent ? '/appointments' : '/landlord/appointments'
+
     await createNotification({
-      userId: appt.student,
+      userId: notifyUserId,
       type: 'system',
-      title: 'Lịch hẹn đã được xác nhận',
-      body: `Chủ trọ đã xác nhận lịch hẹn xem phòng "${appt.room.title}" của bạn.`,
-      link: '/appointments',
+      title: notifyTitle,
+      body: notifyBody,
+      link: notifyLink,
       io,
     })
 
@@ -123,7 +174,7 @@ exports.confirmAppointment = async (req, res) => {
     io.to(`user:${String(appt.student)}`).emit('appointment_updated', { appointmentId: String(appt._id), status: 'confirmed' })
     io.to(`user:${String(appt.landlord)}`).emit('appointment_updated', { appointmentId: String(appt._id), status: 'confirmed' })
 
-    return sendResponse(res, 200, true, 'Đã xác nhận lịch hẹn', { appointment: appt })
+    return sendResponse(res, 200, true, 'Đã xác nhận lịch hẹn thành công', { appointment: appt })
   } catch (error) {
     return sendResponse(res, 500, false, error.message)
   }
@@ -168,14 +219,24 @@ exports.cancelAppointment = async (req, res) => {
 }
 
 // PUT /api/appointments/:id/complete — Chủ trọ đánh dấu hoàn thành
+// PUT /api/appointments/:id/complete — Đánh dấu hoàn thành (chủ trọ hoặc sinh viên)
 exports.completeAppointment = async (req, res) => {
   try {
     const appt = await Appointment.findById(req.params.id)
     if (!appt) return sendResponse(res, 404, false, 'Không tìm thấy lịch hẹn')
-    if (String(appt.landlord) !== String(req.user._id)) return sendResponse(res, 403, false, 'Không có quyền')
+    
+    // Cả 2 bên đều có thể bấm hoàn thành lịch hẹn xem phòng
+    if (String(appt.landlord) !== String(req.user._id) && String(appt.student) !== String(req.user._id)) {
+      return sendResponse(res, 403, false, 'Không có quyền')
+    }
 
     appt.status = 'completed'
     await appt.save()
+
+    const io = req.app.get('io')
+    io.to(`user:${String(appt.student)}`).emit('appointment_updated', { appointmentId: String(appt._id), status: 'completed' })
+    io.to(`user:${String(appt.landlord)}`).emit('appointment_updated', { appointmentId: String(appt._id), status: 'completed' })
+
     return sendResponse(res, 200, true, 'Đã hoàn thành lịch hẹn', { appointment: appt })
   } catch (error) {
     return sendResponse(res, 500, false, error.message)

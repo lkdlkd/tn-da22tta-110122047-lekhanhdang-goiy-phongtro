@@ -536,7 +536,7 @@ export default function MessagesPage() {
                 })
               )}
 
-                {isOtherTyping && <TypingBubble name={otherUser?.name} />}
+                {isOtherTyping && <TypingBubble name={otherUser?.name} avatar={otherUser?.avatar} />}
                 <div ref={bottomRef} />
               </div>
 

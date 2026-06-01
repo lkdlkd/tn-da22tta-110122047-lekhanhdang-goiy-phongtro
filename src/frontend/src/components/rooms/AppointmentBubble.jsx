@@ -51,7 +51,10 @@ export function AppointmentBubble({ appt: initialAppt, isMine }) {
   const cfg = STATUS_CONFIG[appt.status] || STATUS_CONFIG.pending
   const isLandlord = String(user?._id) === String(appt.landlord?._id || appt.landlord)
   const isStudent  = String(user?._id) === String(appt.student?._id  || appt.student)
-  const canConfirm = isLandlord && appt.status === 'pending'
+  
+  const createdByUserId = appt.createdBy?._id || appt.createdBy
+  const isCreator = createdByUserId ? String(user?._id) === String(createdByUserId) : isStudent
+  const canConfirm = !isCreator && appt.status === 'pending'
   const canCancel  = (isLandlord || isStudent) && ['pending', 'confirmed'].includes(appt.status)
 
   const handleConfirm = async () => {

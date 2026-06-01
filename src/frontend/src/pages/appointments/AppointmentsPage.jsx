@@ -73,6 +73,10 @@ function AppointmentCard({ appointment, isLandlord, onConfirm, onComplete, onCan
   const canCancel = appointment.status === 'pending' || appointment.status === 'confirmed'
   const counterpart = isLandlord ? appointment.student : appointment.landlord
 
+  const createdByUserId = appointment.createdBy?._id || appointment.createdBy
+  const isStudentCreator = !createdByUserId || String(createdByUserId) === String(appointment.student?._id || appointment.student)
+  const showConfirmButton = appointment.status === 'pending' && (isLandlord ? isStudentCreator : !isStudentCreator)
+
   return (
     <Card className="overflow-hidden transition-colors hover:border-primary/40">
       <CardContent className="grid gap-0 p-0 md:grid-cols-[220px_1fr]">
@@ -153,20 +157,20 @@ function AppointmentCard({ appointment, isLandlord, onConfirm, onComplete, onCan
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-            {isLandlord && appointment.status === 'pending' && (
+            {showConfirmButton && (
               <Button size="sm" className="h-8 rounded-lg bg-emerald-600 text-xs hover:bg-emerald-700" disabled={busy} onClick={() => onConfirm(appointment._id)}>
                 <CheckCircle className="h-3.5 w-3.5" />
                 Xác nhận
               </Button>
             )}
-            {isLandlord && appointment.status === 'confirmed' && (
+            {appointment.status === 'confirmed' && (
               <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs" disabled={busy} onClick={() => onComplete(appointment._id)}>
                 <CheckCheck className="h-3.5 w-3.5" />
                 Hoàn thành
               </Button>
             )}
-            {isLandlord && appointment.student?._id && (
-              <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs" onClick={() => onMessage(appointment.student._id)}>
+            {appointment.student?._id && appointment.landlord?._id && (
+              <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs" onClick={() => onMessage(isLandlord ? appointment.student._id : appointment.landlord._id)}>
                 <MessageCircle className="h-3.5 w-3.5" />
                 Nhắn tin
               </Button>

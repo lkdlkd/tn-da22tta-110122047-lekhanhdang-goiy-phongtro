@@ -18,6 +18,7 @@ const appointmentSchema = new mongoose.Schema(
     },
     note: { type: String, trim: true, default: '' },
     cancelReason: { type: String, trim: true, default: '' },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 )

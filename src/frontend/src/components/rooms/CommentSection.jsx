@@ -134,8 +134,12 @@ export function CommentSection({ roomId, landlordId }) {
         {user ? (
           <form onSubmit={handleSubmit} className="space-y-2.5">
             <div className="flex gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary">
-                {(user.name || '?')[0].toUpperCase()}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-sm font-bold text-primary">
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  (user.name || '?')[0].toUpperCase()
+                )}
               </div>
               <Textarea
                 ref={textareaRef}
@@ -195,8 +199,12 @@ export function CommentSection({ roomId, landlordId }) {
             {comments.map((comment) => (
               <div key={comment._id} className="flex gap-3 group">
                 {/* Avatar */}
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
-                  {(comment.user?.name || '?')[0].toUpperCase()}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold">
+                  {comment.user?.avatar ? (
+                    <img src={comment.user.avatar} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    (comment.user?.name || '?')[0].toUpperCase()
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">

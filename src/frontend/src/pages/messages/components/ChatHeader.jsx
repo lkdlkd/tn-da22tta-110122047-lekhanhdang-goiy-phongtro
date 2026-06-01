@@ -11,7 +11,7 @@ export function ChatHeader({ otherUser, isOnline, isTyping, conv, onBack, onOpen
           <ArrowLeft className="h-4 w-4" />
         </Button>
 
-        <ConvAvatar name={otherUser?.name} size="md" online={isOnline} />
+        <ConvAvatar name={otherUser?.name} avatar={otherUser?.avatar} size="md" online={isOnline} />
 
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold leading-tight">{otherUser?.name || 'Người dùng'}</p>

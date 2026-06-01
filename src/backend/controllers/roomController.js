@@ -247,7 +247,7 @@ exports.getRooms = async (req, res) => {
 
     const [rooms, total] = await Promise.all([
       Room.find(query)
-        .populate('landlord', 'name username email phone responseRate avgResponseTime')
+        .populate('landlord', 'name username email phone avatar responseRate avgResponseTime')
         .sort(sortBy)
         .skip(skip)
         .limit(limit),
@@ -281,7 +281,7 @@ exports.getMyRooms = async (req, res) => {
 
 exports.getRoomBySlug = async (req, res) => {
   try {
-    const room = await Room.findOne({ slug: req.params.slug }).populate('landlord', 'name username email phone responseRate avgResponseTime')
+    const room = await Room.findOne({ slug: req.params.slug }).populate('landlord', 'name username email phone avatar responseRate avgResponseTime')
     if (!room) {
       return sendResponse(res, 404, false, 'Không tìm thấy phòng')
     }
@@ -308,7 +308,7 @@ exports.getRoomById = async (req, res) => {
       return sendResponse(res, 400, false, 'ID phòng không hợp lệ')
     }
 
-    const room = await Room.findById(req.params.id).populate('landlord', 'name username email phone')
+    const room = await Room.findById(req.params.id).populate('landlord', 'name username email phone avatar')
     if (!room) {
       return sendResponse(res, 404, false, 'Không tìm thấy phòng')
     }

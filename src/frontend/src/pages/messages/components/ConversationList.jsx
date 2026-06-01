@@ -92,7 +92,7 @@ export function ConversationList({
                     isActive ? 'bg-primary/10 ring-1 ring-primary/20' : 'hover:bg-muted/70'
                   )}
                 >
-                  <ConvAvatar name={other?.name} online={onlineUsers[String(other?._id)]} size="md" />
+                  <ConvAvatar name={other?.name} avatar={other?.avatar} online={onlineUsers[String(other?._id)]} size="md" />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

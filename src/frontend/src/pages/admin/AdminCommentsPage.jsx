@@ -148,8 +148,12 @@ export default function AdminCommentsPage() {
                   <CardContent className="space-y-3 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                          {(comment.user?.name || '?')[0].toUpperCase()}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary border">
+                          {comment.user?.avatar ? (
+                            <img src={comment.user.avatar} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            (comment.user?.name || '?')[0].toUpperCase()
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold">{comment.user?.name || 'Người dùng'}</p>
