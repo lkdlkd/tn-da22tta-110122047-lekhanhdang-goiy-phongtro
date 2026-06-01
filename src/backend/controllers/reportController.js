@@ -107,7 +107,10 @@ exports.adminResolveReport = async (req, res) => {
         io: req.app.get('io'),
       })
       // Đánh dấu toàn bộ report của phòng này là resolved
-      await Report.updateMany({ room: report.room._id, status: { $ne: 'resolved' } }, { status: 'resolved' })
+      await Report.updateMany(
+        { room: report.room._id, status: { $ne: 'resolved' } },
+        { status: 'resolved', resolvedAction: action, resolvedAt: new Date() }
+      )
     }
 
     if (action === 'remove_room' && report.room) {
@@ -121,7 +124,10 @@ exports.adminResolveReport = async (req, res) => {
         link: '/landlord/rooms',
         io: req.app.get('io'),
       })
-      await Report.updateMany({ room: report.room._id, status: { $ne: 'resolved' } }, { status: 'resolved' })
+      await Report.updateMany(
+        { room: report.room._id, status: { $ne: 'resolved' } },
+        { status: 'resolved', resolvedAction: action, resolvedAt: new Date() }
+      )
     }
 
     return sendResponse(res, 200, true, 'Đã xử lý báo cáo', { report })

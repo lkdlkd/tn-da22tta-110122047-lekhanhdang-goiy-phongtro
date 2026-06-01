@@ -41,6 +41,12 @@ const STATUS_CFG = {
   resolved: { label: 'Đã giải quyết', cls: 'border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300' },
 }
 
+const RESOLVED_ACTION_LABELS = {
+  dismiss: 'Đã bỏ qua',
+  hide_room: 'Đã ẩn phòng',
+  remove_room: 'Đã xóa phòng',
+}
+
 const STATUS_TABS = [
   { value: 'pending', label: 'Chờ xử lý' },
   { value: 'reviewed', label: 'Đang xem xét' },
@@ -88,7 +94,18 @@ export default function AdminReportsPage() {
     setActionId(resolveTarget._id)
     try {
       await adminResolveReportApi(resolveTarget._id, action)
-      setReports((prev) => prev.map((report) => report._id === resolveTarget._id ? { ...report, status: 'resolved' } : report))
+      setReports((prev) =>
+        prev.map((report) => {
+          if (action === 'dismiss') {
+            return report._id === resolveTarget._id ? { ...report, status: 'resolved', resolvedAction: action } : report
+          } else {
+            // hide_room hoặc remove_room giải quyết toàn bộ report thuộc phòng này
+            return report.room?._id === resolveTarget.room?._id
+              ? { ...report, status: 'resolved', resolvedAction: action }
+              : report
+          }
+        })
+      )
       toast.success(action === 'remove_room' ? 'Đã gỡ phòng vi phạm' : 'Đã xử lý báo cáo')
     } catch {
       toast.error('Lỗi xử lý báo cáo')
@@ -163,6 +180,11 @@ export default function AdminReportsPage() {
                             <span className="font-semibold">Phòng đã xóa</span>
                           )}
                           <Badge variant="outline" className={status.cls}>{status.label}</Badge>
+                          {report.status === 'resolved' && report.resolvedAction && (
+                            <Badge variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                              {RESOLVED_ACTION_LABELS[report.resolvedAction] || report.resolvedAction}
+                            </Badge>
+                          )}
                           {report.room?.status === 'flagged' && (
                             <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">
                               <AlertTriangle className="h-3 w-3" />

@@ -15,6 +15,15 @@ const reportSchema = new mongoose.Schema(
       enum: ['pending', 'reviewed', 'resolved'],
       default: 'pending',
     },
+    resolvedAction: {
+      type: String,
+      enum: ['dismiss', 'hide_room', 'remove_room'],
+      default: null,
+    },
+    resolvedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 )

@@ -166,6 +166,16 @@ export default function AdminCommentsPage() {
                       {comment.content}
                     </div>
 
+                    {comment.landlordReply?.content && (
+                      <div className="ml-6 p-3.5 rounded-lg border-l-2 border-primary/30 bg-primary/5 dark:bg-primary/5/10 text-sm space-y-1">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="font-semibold text-primary">Chủ trọ phản hồi:</span>
+                          <span>{dayjs(comment.landlordReply.repliedAt).fromNow()}</span>
+                        </div>
+                        <p className="text-foreground leading-relaxed italic">“{comment.landlordReply.content}”</p>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       {comment.room ? (
                         <Link to={`/rooms/${comment.room.slug}`} target="_blank" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">

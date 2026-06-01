@@ -9,13 +9,13 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Compass,
   Home,
   Map,
   MapPin,
   MessageCircle,
   Search,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   Wifi,
 } from 'lucide-react'
@@ -36,7 +36,7 @@ const CATEGORY_LINKS = [
 
 const FEATURES = [
   {
-    icon: Sparkles,
+    icon: Compass,
     title: 'Gợi ý đúng nhu cầu',
     desc: 'Lọc theo giá, khu vực, tiện ích và nhận gợi ý phù hợp hơn khi đăng nhập.',
   },
@@ -186,7 +186,7 @@ export default function HomePage() {
               >
                 <Link to={user ? '/recommend' : '/login'}>
                   Gợi ý cho bạn
-                  <Sparkles className="h-4 w-4" />
+                  <Compass className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -195,7 +195,7 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:-mt-20 lg:px-8 lg:pb-0">
           <form onSubmit={handleSearch} className="grid gap-3 rounded-xl border bg-background p-3 shadow-xl sm:p-4 md:grid-cols-[1.3fr_1fr_auto]">
-            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 focus-within:border-primary">
               <Search className="h-5 w-5 shrink-0 text-primary" />
               <span className="min-w-0 flex-1">
                 <span className="block text-xs font-medium text-muted-foreground">Bạn muốn tìm gì?</span>
@@ -203,11 +203,11 @@ export default function HomePage() {
                   value={q}
                   onChange={(event) => setQ(event.target.value)}
                   placeholder="Tên phòng, loại phòng, tiện ích..."
-                  className="mt-1 w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+                  className="mt-1 w-full border-none border-0 p-0 bg-transparent text-sm font-medium outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 placeholder:text-muted-foreground"
                 />
               </span>
             </label>
-            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <label className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 focus-within:border-primary">
               <MapPin className="h-5 w-5 shrink-0 text-primary" />
               <span className="min-w-0 flex-1">
                 <span className="block text-xs font-medium text-muted-foreground">Khu vực</span>
@@ -215,7 +215,7 @@ export default function HomePage() {
                   value={area}
                   onChange={(event) => setArea(event.target.value)}
                   placeholder="Phường, đường, gần trường..."
-                  className="mt-1 w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
+                  className="mt-1 w-full border-none border-0 p-0 bg-transparent text-sm font-medium outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 placeholder:text-muted-foreground"
                 />
               </span>
             </label>

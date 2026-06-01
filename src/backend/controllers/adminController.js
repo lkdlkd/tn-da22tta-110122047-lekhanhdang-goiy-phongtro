@@ -197,6 +197,74 @@ exports.adminUnbanUser = async (req, res) => {
   }
 }
 
+// PUT /api/admin/users/:id
+exports.adminUpdateUser = async (req, res) => {
+  try {
+    const { name, phone, role } = req.body
+
+    const user = await User.findById(req.params.id)
+    if (!user) return sendResponse(res, 404, false, 'Không tìm thấy người dùng')
+
+    // Không cho phép thay đổi thông tin/vai trò của tài khoản Admin
+    if (user.role === 'admin') {
+      return sendResponse(res, 400, false, 'Không thể thay đổi thông tin hoặc vai trò của tài khoản Admin')
+    }
+
+    // Không cho phép nâng cấp tài khoản khác lên Admin
+    if (role === 'admin') {
+      return sendResponse(res, 400, false, 'Không thể cấp quyền Admin cho tài khoản khác')
+    }
+
+    user.name = name || user.name
+    user.phone = phone !== undefined ? phone : user.phone
+    user.role = role || user.role
+
+    await user.save()
+
+    const updatedUser = await User.findById(user._id).select('-password')
+    return sendResponse(res, 200, true, 'Cập nhật thông tin người dùng thành công', { user: updatedUser })
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message)
+  }
+}
+
+// PUT /api/admin/users/:id/reset-password
+exports.adminResetPassword = async (req, res) => {
+  try {
+    const { password } = req.body
+    if (!password || password.length < 6) {
+      return sendResponse(res, 400, false, 'Mật khẩu mới phải có tối thiểu 6 ký tự')
+    }
+
+    const user = await User.findById(req.params.id)
+    if (!user) return sendResponse(res, 404, false, 'Không tìm thấy người dùng')
+
+    user.password = password
+    await user.save()
+
+    return sendResponse(res, 200, true, 'Đã cấp lại mật khẩu thành công')
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message)
+  }
+}
+
+// DELETE /api/admin/users/:id
+exports.adminDeleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+    if (!user) return sendResponse(res, 404, false, 'Không tìm thấy người dùng')
+
+    if (user.role === 'admin') {
+      return sendResponse(res, 400, false, 'Không thể xóa tài khoản Admin')
+    }
+
+    await User.findByIdAndDelete(req.params.id)
+    return sendResponse(res, 200, true, 'Đã xóa tài khoản người dùng thành công')
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message)
+  }
+}
+
 // GET /api/admin/stats
 exports.adminGetStats = async (req, res) => {
   try {

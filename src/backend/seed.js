@@ -97,21 +97,34 @@ const DESCRIPTIONS = [
   (type, area, price) => `Cần tìm người thuê phòng loại ${type.replace('_', ' ')}, diện tích ${area}m², nội thất cơ bản đầy đủ. Vị trí đẹp, gần trung tâm thành phố Trà Vinh. Giá ưu đãi: ${price.toLocaleString('vi-VN')}đ/tháng.`,
 ]
 
-const TITLES = [
-  (ward) => `Phòng trọ đẹp gần trung tâm ${ward}`,
-  (ward) => `Cho thuê phòng sạch sẽ, tiện nghi đầy đủ tại ${ward}`,
-  (ward) => `Phòng trọ giá rẻ sinh viên ${ward}`,
-  (ward) => `Chung cư mini hiện đại tại ${ward} Trà Vinh`,
-  (ward) => `Nhà nguyên căn rộng rãi, hẻm yên tĩnh ${ward}`,
-  (ward) => `Phòng ký túc xá có máy lạnh ${ward}`,
-  (ward) => `Phòng trọ cao cấp, đầy đủ nội thất ${ward}`,
-  (ward) => `Cho thuê phòng giá hợp lý tại ${ward} TP. Trà Vinh`,
-]
+const TITLES_BY_TYPE = {
+  'phòng_trọ': [
+    (ward) => `Phòng trọ đẹp gần trung tâm ${ward}`,
+    (ward) => `Cho thuê phòng sạch sẽ, tiện nghi đầy đủ tại ${ward}`,
+    (ward) => `Phòng trọ giá rẻ sinh viên ${ward}`,
+    (ward) => `Phòng trọ cao cấp, đầy đủ nội thất ${ward}`,
+  ],
+  'chung_cư_mini': [
+    (ward) => `Chung cư mini hiện đại tại ${ward} Trà Vinh`,
+    (ward) => `Cho thuê căn hộ chung cư mini sạch sẽ tại ${ward}`,
+    (ward) => `Chung cư mini khép kín giá rẻ tại ${ward}`,
+  ],
+  'nhà_nguyên_căn': [
+    (ward) => `Nhà nguyên căn rộng rãi, hẻm yên tĩnh ${ward}`,
+    (ward) => `Cho thuê nhà nguyên căn nguyên khối tại ${ward}`,
+    (ward) => `Nhà nguyên căn thích hợp cho hộ gia đình hoặc nhóm bạn tại ${ward}`,
+  ],
+  'ký_túc_xá': [
+    (ward) => `Phòng ký túc xá có máy lạnh ${ward}`,
+    (ward) => `Giường ký túc xá giá rẻ cho sinh viên tại ${ward}`,
+    (ward) => `Ký túc xá dịch vụ trọn gói gần trường đại học tại ${ward}`,
+  ],
+}
 
 // ── Hàm tạo seed ─────────────────────────────────────────────────────────────
 async function seed() {
-  await mongoose.connect(MONGODB_URI)
-  console.log('✅ Connected to MongoDB:', MONGODB_URI)
+  await mongoose.connect("mongodb+srv://khanhdang2440:dang245@cluster0.cmpuh.mongodb.net/phongtro")
+  console.log('✅ Connected to MongoDB Atlas Cluster0')
 
   // 1. Tạo hoặc tìm landlord seed
   let landlord = await User.findOne({ email: 'seed.landlord@phongtro.vl' })
@@ -146,7 +159,7 @@ async function seed() {
     const street = pick(STREETS)
     const coords = spreadCoord(BASE_LAT, BASE_LNG, 6)
     const amenities = pickAmenities(tpl.type === 'ký_túc_xá' ? 1 : 3, tpl.type === 'nhà_nguyên_căn' ? 10 : 7)
-    const titleFn = pick(TITLES)
+    const titleFn = pick(TITLES_BY_TYPE[tpl.type])
     const descFn = pick(DESCRIPTIONS)
     const title = titleFn(ward)
 

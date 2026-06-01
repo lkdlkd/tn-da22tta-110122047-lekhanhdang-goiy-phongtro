@@ -1,4 +1,4 @@
-﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
@@ -12,6 +12,7 @@ import {
   Building2,
   Calendar,
   ChevronDown,
+  Compass,
   Heart,
   LayoutDashboard,
   LogOut,
@@ -20,7 +21,6 @@ import {
   Moon,
   Search,
   Shield,
-  Sparkles,
   Sun,
   User,
   X,
@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils'
 const NAV_LINKS = [
   { to: '/', label: 'Trang chủ', exact: true, icon: null },
   { to: '/search', label: 'Tìm phòng', icon: Search },
-  { to: '/recommend', label: 'Gợi ý', icon: Sparkles },
+  { to: '/recommend', label: 'Gợi ý', icon: Compass },
 ]
 const LANDLORD_MENU = [
   { to: '/landlord/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
@@ -84,7 +84,7 @@ function LandlordDropdown() {
         onClick={() => setOpen((value) => !value)}
         className={cn(
           'flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
-          isActive ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
+          isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
         )}
       >
         <Building2 className="h-4 w-4" />
@@ -101,7 +101,7 @@ function LandlordDropdown() {
               className={cn(
                 'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
                 location.pathname.startsWith(to)
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-primary/10 text-primary font-medium'
                   : 'text-foreground hover:bg-primary/10 hover:text-primary'
               )}
             >
@@ -201,7 +201,7 @@ export function Navbar() {
               className={cn(
                 'flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
                 isActive(to, exact)
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
               )}
             >
@@ -215,7 +215,7 @@ export function Navbar() {
               to="/admin"
               className={cn(
                 'flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
-                isActive('/admin') ? 'bg-primary text-primary-foreground shadow-sm' : 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30'
+                isActive('/admin') ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium' : 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30'
               )}
             >
               <Shield className="h-4 w-4" />
@@ -239,7 +239,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-lg"
+            className="hidden h-9 w-9 rounded-lg md:inline-flex"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Đổi giao diện"
           >
@@ -249,7 +249,7 @@ export function Navbar() {
 
         {isAuth ? (
           <>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg" asChild>
+            <Button variant="ghost" size="icon" className="hidden h-9 w-9 rounded-lg md:inline-flex relative" asChild>
               <Link to="/messages" title="Tin nhắn">
                 <MessageCircle className="h-4 w-4" />
                 {unreadMsgs > 0 && (
@@ -355,7 +355,7 @@ export function Navbar() {
                   to={to}
                   className={cn(
                     'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-                    isActive(to, exact) ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground hover:bg-primary/10 hover:text-primary'
+                    isActive(to, exact) ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-primary/10 hover:text-primary'
                   )}
                 >
                   {Icon && <Icon className="h-4 w-4" />}
@@ -425,6 +425,36 @@ export function Navbar() {
                 <Button variant="outline" asChild className="h-10 w-full rounded-lg">
                   <Link to="/register">Đăng ký miễn phí</Link>
                 </Button>
+              </div>
+            )}
+
+            {mounted && (
+              <div className="mt-6 rounded-xl border bg-muted/30 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Giao diện</span>
+                  <div className="flex items-center gap-1 rounded-lg border bg-background p-0.5">
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={cn(
+                        'flex h-7 px-2.5 items-center gap-1.5 rounded-md text-xs font-medium transition-all',
+                        theme === 'light' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Sun className="h-3.5 w-3.5" />
+                      Sáng
+                    </button>
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={cn(
+                        'flex h-7 px-2.5 items-center gap-1.5 rounded-md text-xs font-medium transition-all',
+                        theme === 'dark' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Moon className="h-3.5 w-3.5" />
+                      Tối
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

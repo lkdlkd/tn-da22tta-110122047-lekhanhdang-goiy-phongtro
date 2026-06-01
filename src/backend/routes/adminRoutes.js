@@ -4,6 +4,7 @@ const {
   adminGetRooms, adminApproveRoom, adminRejectRoom,
   adminHideRoom, adminDeleteRoom, adminRestoreRoom,
   adminGetUsers, adminBanUser, adminUnbanUser,
+  adminUpdateUser, adminResetPassword, adminDeleteUser,
   adminGetStats,
 } = require('../controllers/adminController')
 const { adminGetComments, adminApproveComment, adminRejectComment, adminDeleteComment } = require('../controllers/commentController')
@@ -21,8 +22,11 @@ router.put('/rooms/:id/restore', adminRestoreRoom)
 router.delete('/rooms/:id', adminDeleteRoom)
 
 router.get('/users', adminGetUsers)
+router.put('/users/:id', adminUpdateUser)
 router.put('/users/:id/ban', adminBanUser)
 router.put('/users/:id/unban', adminUnbanUser)
+router.put('/users/:id/reset-password', adminResetPassword)
+router.delete('/users/:id', adminDeleteUser)
 
 router.get('/comments', adminGetComments)
 router.put('/comments/:id/approve', adminApproveComment)

@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Mail, Phone, Search, ShieldBan, ShieldCheck, Users } from 'lucide-react'
+import { Mail, Phone, Search, ShieldBan, ShieldCheck, Users, Edit, Key, Trash2, AlertTriangle } from 'lucide-react'
 import dayjs from 'dayjs'
-import { adminBanUserApi, adminGetUsersApi, adminUnbanUserApi } from '@/services/adminService'
+import {
+  adminBanUserApi,
+  adminGetUsersApi,
+  adminUnbanUserApi,
+  adminUpdateUserApi,
+  adminResetPasswordApi,
+  adminDeleteUserApi,
+} from '@/services/adminService'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import {
   AdminContent,
@@ -58,6 +66,13 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
   const [actionLoading, setActionLoading] = useState('')
+  
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', phone: '', role: 'student' })
+  const [resetTarget, setResetTarget] = useState(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  
   const searchTimeout = useRef(null)
   const LIMIT = 20
 
@@ -95,6 +110,70 @@ export default function AdminUsersPage() {
       toast.success(isBanned ? 'Đã mở khóa tài khoản' : 'Đã khóa tài khoản')
     } catch {
       toast.error('Thao tác thất bại')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleEditOpen = (user) => {
+    setEditTarget(user)
+    setEditForm({
+      name: user.name || '',
+      phone: user.phone || '',
+      role: user.role || 'student',
+    })
+  }
+
+  const handleEditSave = async () => {
+    if (!editTarget) return
+    if (!editForm.name.trim()) {
+      toast.error('Tên không được để trống')
+      return
+    }
+    setActionLoading(editTarget._id)
+    try {
+      await adminUpdateUserApi(editTarget._id, editForm)
+      setUsers((prev) =>
+        prev.map((user) => (user._id === editTarget._id ? { ...user, ...editForm } : user))
+      )
+      toast.success('Cập nhật thông tin thành công')
+      setEditTarget(null)
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Cập nhật thất bại')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetTarget) return
+    if (!resetPassword || resetPassword.length < 6) {
+      toast.error('Mật khẩu tối thiểu phải 6 ký tự')
+      return
+    }
+    setActionLoading(resetTarget._id)
+    try {
+      await adminResetPasswordApi(resetTarget._id, resetPassword)
+      toast.success('Đã cấp lại mật khẩu thành công')
+      setResetTarget(null)
+      setResetPassword('')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Thao tác thất bại')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return
+    setActionLoading(deleteTarget._id)
+    try {
+      await adminDeleteUserApi(deleteTarget._id)
+      setUsers((prev) => prev.filter((user) => user._id !== deleteTarget._id))
+      toast.success('Đã xóa tài khoản thành công')
+      setDeleteTarget(null)
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Thao tác thất bại')
     } finally {
       setActionLoading('')
     }
@@ -206,32 +285,66 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  {user.role !== 'admin' && (
-                    <div className="border-t pt-3 flex justify-end">
+                  <div className="border-t pt-3 flex flex-wrap items-center justify-end gap-1.5">
+                    {user.role !== 'admin' && (
                       <Button
-                        variant={user.isBanned ? 'outline' : 'ghost'}
+                        variant="outline"
                         size="sm"
-                        className={cn(
-                          'h-8 rounded-lg text-xs font-semibold px-3.5 flex-1 sm:flex-initial',
-                          !user.isBanned && 'text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/20'
-                        )}
+                        className="h-8 rounded-lg text-xs font-semibold px-2.5 flex-1"
                         disabled={actionLoading === user._id}
-                        onClick={() => handleBan(user._id, user.isBanned)}
+                        onClick={() => handleEditOpen(user)}
                       >
-                        {user.isBanned ? (
-                          <>
-                            <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                            Mở khóa tài khoản
-                          </>
-                        ) : (
-                          <>
-                            <ShieldBan className="h-3.5 w-3.5 mr-1" />
-                            Khóa tài khoản
-                          </>
-                        )}
+                        <Edit className="h-3.5 w-3.5 mr-1" />
+                        Sửa
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs font-semibold px-2.5 flex-1"
+                      disabled={actionLoading === user._id}
+                      onClick={() => { setResetTarget(user); setResetPassword('') }}
+                    >
+                      <Key className="h-3.5 w-3.5 mr-1" />
+                      Mật khẩu
+                    </Button>
+                    {user.role !== 'admin' && (
+                      <>
+                        <Button
+                          variant={user.isBanned ? 'outline' : 'ghost'}
+                          size="sm"
+                          className={cn(
+                            'h-8 rounded-lg text-xs font-semibold px-2.5 flex-1',
+                            !user.isBanned && 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                          )}
+                          disabled={actionLoading === user._id}
+                          onClick={() => handleBan(user._id, user.isBanned)}
+                        >
+                          {user.isBanned ? (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                              Mở khóa
+                            </>
+                          ) : (
+                            <>
+                              <ShieldBan className="h-3.5 w-3.5 mr-1" />
+                              Khóa
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg text-red-600 hover:bg-red-50 shrink-0"
+                          disabled={actionLoading === user._id}
+                          onClick={() => setDeleteTarget(user)}
+                          title="Xóa vĩnh viễn"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </Card>
               )
             })
@@ -308,19 +421,58 @@ export default function AdminUsersPage() {
                             ? <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Đã xác minh</Badge>
                             : <span className="text-xs text-muted-foreground">Chưa xác minh</span>}
                         </td>
-                        <td className="px-5 py-3 text-right">
-                          {user.role !== 'admin' && (
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {user.role !== 'admin' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
+                                disabled={actionLoading === user._id}
+                                onClick={() => handleEditOpen(user)}
+                                title="Sửa thông tin"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
-                              variant={user.isBanned ? 'outline' : 'ghost'}
-                              size="sm"
-                              className={cn('h-8 rounded-lg text-xs', !user.isBanned && 'text-red-600 hover:bg-red-50 hover:text-red-700')}
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
                               disabled={actionLoading === user._id}
-                              onClick={() => handleBan(user._id, user.isBanned)}
+                              onClick={() => { setResetTarget(user); setResetPassword('') }}
+                              title="Cấp lại mật khẩu"
                             >
-                              {user.isBanned ? <ShieldCheck className="h-4 w-4" /> : <ShieldBan className="h-4 w-4" />}
-                              {user.isBanned ? 'Mở khóa' : 'Khóa'}
+                              <Key className="h-4 w-4" />
                             </Button>
-                          )}
+                            {user.role !== 'admin' && (
+                              <>
+                                <Button
+                                  variant={user.isBanned ? 'outline' : 'ghost'}
+                                  size="sm"
+                                  className={cn(
+                                    'h-8 rounded-lg text-xs font-semibold px-2.5',
+                                    !user.isBanned && 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                                  )}
+                                  disabled={actionLoading === user._id}
+                                  onClick={() => handleBan(user._id, user.isBanned)}
+                                >
+                                  {user.isBanned ? <ShieldCheck className="h-4 w-4 mr-1" /> : <ShieldBan className="h-4 w-4 mr-1" />}
+                                  {user.isBanned ? 'Mở khóa' : 'Khóa'}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg text-red-600 hover:bg-red-50"
+                                  disabled={actionLoading === user._id}
+                                  onClick={() => setDeleteTarget(user)}
+                                  title="Xóa tài khoản"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -332,6 +484,115 @@ export default function AdminUsersPage() {
           <AdminPagination page={page} totalPages={pagination.totalPages} total={pagination.total} label="tài khoản" onChange={setPage} />
         </Card>
       </AdminContent>
+
+      {/* Modal Chỉnh sửa thông tin */}
+      <Dialog open={Boolean(editTarget)} onOpenChange={() => setEditTarget(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa người dùng</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cá nhân và phân quyền vai trò cho tài khoản.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Họ và tên</label>
+              <Input
+                value={editForm.name}
+                onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                placeholder="Nhập họ tên đầy đủ..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground/80">Địa chỉ Email (Chỉ đọc)</label>
+              <Input
+                value={editTarget?.email || ''}
+                disabled
+                className="bg-muted text-muted-foreground cursor-not-allowed select-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Số điện thoại</label>
+              <Input
+                value={editForm.phone}
+                onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })}
+                placeholder="Nhập số điện thoại..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vai trò hệ thống</label>
+              <select
+                value={editForm.role}
+                onChange={(event) => setEditForm({ ...editForm, role: event.target.value })}
+                className="w-full h-10 px-3 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="student">Sinh viên / Khách thuê</option>
+                <option value="landlord">Chủ trọ</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>Hủy</Button>
+            <Button onClick={handleEditSave} disabled={Boolean(actionLoading)}>
+              Lưu thay đổi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Cấp lại mật khẩu */}
+      <Dialog open={Boolean(resetTarget)} onOpenChange={() => { setResetTarget(null); setResetPassword('') }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <Key className="h-5 w-5" />
+              Cấp lại mật khẩu
+            </DialogTitle>
+            <DialogDescription>
+              Thiết lập mật khẩu mới cho tài khoản của <strong>{resetTarget?.name}</strong> ({resetTarget?.email}).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mật khẩu mới</label>
+              <Input
+                type="text"
+                value={resetPassword}
+                onChange={(event) => setResetPassword(event.target.value)}
+                placeholder="Nhập tối thiểu 6 ký tự..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetTarget(null); setResetPassword('') }}>Hủy</Button>
+            <Button variant="default" onClick={handleResetPassword} disabled={Boolean(actionLoading)}>
+              Xác nhận cấp lại
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Xác nhận xóa vĩnh viễn */}
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-500">
+              <AlertTriangle className="h-5 w-5" />
+              Xóa tài khoản vĩnh viễn
+            </DialogTitle>
+            <DialogDescription>
+              Hành động này <strong>không thể hoàn tác</strong>. Mọi dữ liệu về tài khoản <strong>{deleteTarget?.name}</strong> sẽ bị xóa vĩnh viễn khỏi cơ sở dữ liệu.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Hủy</Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={Boolean(actionLoading)}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              Xóa vĩnh viễn
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
