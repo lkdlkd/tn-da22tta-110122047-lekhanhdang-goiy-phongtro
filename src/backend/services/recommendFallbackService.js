@@ -133,7 +133,11 @@ function buildUserProfileVector(history, stats) {
 
   const now = Date.now()
   const weightedVectors = history.map((item) => {
-    let weight = item.interactionType === 'save' ? 2 : 1
+    let weight = 1
+    if (item.interactionType === 'save') weight = 2
+    else if (item.interactionType === 'chat') weight = 3
+    else if (item.interactionType === 'booking') weight = 4
+
     if (item.interactedAt) {
       const ts = Date.parse(item.interactedAt)
       if (Number.isFinite(ts)) {
@@ -227,23 +231,25 @@ function rankForYou({ criteria, candidates, userHistory = [], center, limit }) {
   const stats = computeStats(candidates)
   const hasGps = !!center
   const hasHistory = userHistory.length > 0
+  
+  // Loại bỏ hoàn toàn bộ lọc (content = 0), phân bổ lại trọng số cho vị trí, chất lượng và sở thích cá nhân
   const weights = hasHistory
     ? (hasGps
-      ? { content: 0.15, location: 0.45, quality: 0.10, personal: 0.30 }
-      : { content: 0.30, location: 0, quality: 0.20, personal: 0.50 })
+      ? { content: 0, location: 0.55, quality: 0.10, personal: 0.35 }
+      : { content: 0, location: 0, quality: 0.25, personal: 0.75 })
     : (hasGps
-      ? { content: 0.20, location: 0.55, quality: 0.25, personal: 0 }
-      : { content: 0.65, location: 0, quality: 0.35, personal: 0 })
+      ? { content: 0, location: 0.70, quality: 0.30, personal: 0 }
+      : { content: 0, location: 0, quality: 1.00, personal: 0 })
 
   return scoreAndRank({
     candidates,
-    targetVec: buildCriteriaVector(criteria, stats),
+    targetVec: Array(VECTOR_DIM).fill(0), // Không so khớp vector tiêu chí
     center,
-    radiusKm: number(criteria.radius, 5),
+    radiusKm: criteria ? number(criteria.radius, 5) : 5,
     weights,
     stats,
     limit,
-    requiredAmenities: criteria.amenities || [],
+    requiredAmenities: [], // Không yêu cầu tiện ích lọc
     userProfileVec: hasHistory ? buildUserProfileVector(userHistory, stats) : null,
   })
 }

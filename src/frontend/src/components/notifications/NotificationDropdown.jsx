@@ -95,7 +95,7 @@ export function NotificationDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-popover shadow-xl">
+        <div className="fixed inset-x-4 top-16 z-50 mt-2 rounded-xl border bg-popover shadow-xl md:absolute md:right-0 md:left-auto md:top-full md:w-80 md:inset-x-auto">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-4 py-2.5">
             <span className="text-sm font-semibold">Thông báo</span>

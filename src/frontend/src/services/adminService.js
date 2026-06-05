@@ -14,3 +14,4 @@ export const adminUnbanUserApi = (id) => axiosInstance.put(`/api/admin/users/${i
 export const adminResetPasswordApi = (id, password) => axiosInstance.put(`/api/admin/users/${id}/reset-password`, { password })
 export const adminDeleteUserApi = (id) => axiosInstance.delete(`/api/admin/users/${id}`)
 export const adminGetStatsApi = () => axiosInstance.get('/api/admin/stats')
+export const adminSendNotificationApi = (data) => axiosInstance.post('/api/admin/notifications', data)

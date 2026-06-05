@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast } from 'sonner'
-import { loginApi, getMeApi, finalizeRoleApi, googleLoginApi } from '@/services/authService'
+import { loginApi, getMeApi, finalizeRoleApi, googleLoginApi, resendVerificationApi } from '@/services/authService'
 import { loginStart, loginSuccess, loginFailure } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,11 +62,38 @@ export default function LoginPage() {
   const [googleTokenVal, setGoogleTokenVal] = useState('')
   const [roleLoading, setRoleLoading] = useState(false)
 
+  const [resendCountdown, setResendCountdown] = useState(0)
+
+  useEffect(() => {
+    if (resendCountdown === 0) return
+    const timer = setTimeout(() => {
+      setResendCountdown(resendCountdown - 1)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [resendCountdown])
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: yupResolver(schema) })
+
+  const handleResendVerification = async () => {
+    if (resendCountdown > 0) return
+    const email = watch('email')
+    if (!email) {
+      toast.error('Vui lòng điền email của bạn để gửi lại liên kết xác thực')
+      return
+    }
+    try {
+      await resendVerificationApi(email)
+      toast.success('Đã gửi lại email xác thực!')
+      setResendCountdown(60)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gửi lại email thất bại')
+    }
+  }
 
   useEffect(() => {
     const token = searchParams.get('token')
@@ -215,7 +242,7 @@ export default function LoginPage() {
           asideDescription="Để tiếp tục sử dụng dịch vụ bằng tài khoản Google, hãy xác định vai trò của bạn."
           asideItems={[
             { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
-            { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
+            { icon: Sparkles, title: 'Gợi ý', desc: 'Ưu tiên phòng hợp nhu cầu.' },
             { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
           ]}
         >
@@ -238,7 +265,7 @@ export default function LoginPage() {
                   id="google-role-student"
                   onClick={() => handleRoleSelect('student')}
                   disabled={roleLoading}
-                  className="flex min-h-28 flex-col items-start gap-2 rounded-lg border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
+                  className="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
                 >
                   <GraduationCap className="h-5 w-5 text-primary" />
                   <span className="text-sm font-semibold">Sinh viên / Người thuê</span>
@@ -251,7 +278,7 @@ export default function LoginPage() {
                   id="google-role-landlord"
                   onClick={() => handleRoleSelect('landlord')}
                   disabled={roleLoading}
-                  className="flex min-h-28 flex-col items-start gap-2 rounded-lg border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
+                  className="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-border bg-background p-4 text-left transition-all hover:border-primary/50 hover:bg-muted/40 disabled:opacity-50"
                 >
                   <Building2 className="h-5 w-5 text-primary" />
                   <span className="text-sm font-semibold">Chủ trọ / Cho thuê</span>
@@ -277,7 +304,7 @@ export default function LoginPage() {
           asideDescription="Một tài khoản giúp bạn quản lý phòng yêu thích, lịch hẹn, tin nhắn và các đề xuất cá nhân hóa."
           asideItems={[
             { icon: Search, title: 'Tìm nhanh', desc: 'Lọc theo giá, vị trí và tiện ích.' },
-            { icon: Sparkles, title: 'Gợi ý AI', desc: 'Ưu tiên phòng hợp nhu cầu.' },
+            { icon: Sparkles, title: 'Gợi ý', desc: 'Ưu tiên phòng hợp nhu cầu.' },
             { icon: MapPinned, title: 'Theo khu vực', desc: 'Tập trung vào các điểm gần bạn.' },
           ]}
           footerPrompt="Chưa có tài khoản?"
@@ -295,7 +322,7 @@ export default function LoginPage() {
                   id="btn-google-login"
                   type="button"
                   variant="outline"
-                  className="h-11 w-full rounded-lg"
+                  className="h-11 w-full rounded-xl"
                   onClick={handleGoogleLogin}
                 >
                   <GoogleIcon className="h-4 w-4" />
@@ -312,9 +339,24 @@ export default function LoginPage() {
                 </div>
 
                 {apiError && (
-                  <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
-                    <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
+                    <div className="flex-1 font-semibold leading-relaxed">
+                      {apiError}
+                      {apiError.includes('chưa được xác thực email') && (
+                        <div className="mt-2">
+                          <Button
+                            type="button"
+                            variant="link"
+                            onClick={handleResendVerification}
+                            disabled={resendCountdown > 0}
+                            className="h-auto p-0 text-xs font-semibold text-primary underline hover:text-primary/80"
+                          >
+                            {resendCountdown > 0 ? `Gửi lại sau (${resendCountdown}s)` : 'Gửi lại email xác thực ngay'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -325,7 +367,7 @@ export default function LoginPage() {
                     autoComplete="email"
                     placeholder="example@email.com"
                     className={cn(
-                      'h-11 rounded-lg transition-all duration-300',
+                      'h-11 rounded-xl transition-all duration-300',
                       errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
                     )}
                     {...register('email')}

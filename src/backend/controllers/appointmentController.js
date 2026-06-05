@@ -5,6 +5,7 @@ const Room = require('../models/Room')
 const mongoose = require('mongoose')
 const sendResponse = require('../utils/apiResponse')
 const { createNotification } = require('./notificationController')
+const { recordInteraction } = require('./interactionController')
 
 const TIME_SLOT_LABELS = {
   morning: 'Sáng (8h–12h)',
@@ -98,6 +99,11 @@ exports.createAppointment = async (req, res) => {
       io,
     })
 
+    // Ghi nhận tương tác 'booking' cho sinh viên để cá nhân hóa gợi ý
+    if (studentId && roomId) {
+      recordInteraction(studentId, roomId, 'booking').catch(() => {})
+    }
+
     return sendResponse(res, 201, true, 'Tạo đề xuất lịch hẹn thành công', { appointment })
   } catch (error) {
     return sendResponse(res, 500, false, error.message)
@@ -115,8 +121,8 @@ exports.getAppointments = async (req, res) => {
 
     const appointments = await Appointment.find(query)
       .populate('room', 'title slug images address')
-      .populate('student', 'name email phone')
-      .populate('landlord', 'name email phone')
+      .populate('student', 'name email phone avatar')
+      .populate('landlord', 'name email phone avatar')
       .sort({ date: -1 })
 
     return sendResponse(res, 200, true, 'Danh sách lịch hẹn', { appointments })
@@ -138,13 +144,16 @@ exports.confirmAppointment = async (req, res) => {
 
     // Nếu sinh viên tạo -> Chủ trọ phải là người xác nhận
     // Nếu chủ trọ tạo -> Sinh viên phải là người xác nhận
-    if (isCreatedByStudent) {
-      if (String(appt.landlord) !== String(req.user._id)) {
-        return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ chủ trọ mới có quyền xác nhận)')
-      }
-    } else {
-      if (String(appt.student) !== String(req.user._id)) {
-        return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ sinh viên mới có quyền xác nhận)')
+    const isAdmin = req.user.role === 'admin'
+    if (!isAdmin) {
+      if (isCreatedByStudent) {
+        if (String(appt.landlord) !== String(req.user._id)) {
+          return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ chủ trọ mới có quyền xác nhận)')
+        }
+      } else {
+        if (String(appt.student) !== String(req.user._id)) {
+          return sendResponse(res, 403, false, 'Không có quyền xác nhận lịch hẹn này (Chỉ sinh viên mới có quyền xác nhận)')
+        }
       }
     }
 
@@ -188,7 +197,8 @@ exports.cancelAppointment = async (req, res) => {
 
     const isStudent = String(appt.student) === String(req.user._id)
     const isLandlord = String(appt.landlord) === String(req.user._id)
-    if (!isStudent && !isLandlord) return sendResponse(res, 403, false, 'Không có quyền')
+    const isAdmin = req.user.role === 'admin'
+    if (!isStudent && !isLandlord && !isAdmin) return sendResponse(res, 403, false, 'Không có quyền')
     if (['cancelled', 'completed'].includes(appt.status)) return sendResponse(res, 400, false, 'Không thể huỷ lịch này')
 
     appt.status = 'cancelled'
@@ -226,7 +236,8 @@ exports.completeAppointment = async (req, res) => {
     if (!appt) return sendResponse(res, 404, false, 'Không tìm thấy lịch hẹn')
     
     // Cả 2 bên đều có thể bấm hoàn thành lịch hẹn xem phòng
-    if (String(appt.landlord) !== String(req.user._id) && String(appt.student) !== String(req.user._id)) {
+    const isAdmin = req.user.role === 'admin'
+    if (!isAdmin && String(appt.landlord) !== String(req.user._id) && String(appt.student) !== String(req.user._id)) {
       return sendResponse(res, 403, false, 'Không có quyền')
     }
 

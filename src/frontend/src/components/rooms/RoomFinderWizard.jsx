@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles, ChevronLeft, ChevronRight, MapPin, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { wizardRecommendApi } from '@/services/recommendService'
 import { WizardResultsSheet } from './WizardResultsSheet'
@@ -14,20 +14,20 @@ import { LocationPickerDialog } from '@/components/common/LocationPickerDialog'
 const TOTAL_STEPS = 5
 
 const ROOM_TYPES = [
-  { value: null,             label: 'Tất cả',        emoji: '🏘️' },
-  { value: 'phòng_trọ',     label: 'Phòng trọ',     emoji: '🛏️' },
-  { value: 'chung_cư_mini', label: 'Chung cư mini',  emoji: '🏢' },
-  { value: 'nhà_nguyên_căn',label: 'Nhà nguyên căn', emoji: '🏠' },
-  { value: 'ký_túc_xá',    label: 'Ký túc xá',      emoji: '🎓' },
+  { value: null,             label: 'Tất cả' },
+  { value: 'phòng_trọ',     label: 'Phòng trọ' },
+  { value: 'chung_cư_mini', label: 'Chung cư mini' },
+  { value: 'nhà_nguyên_căn',label: 'Nhà nguyên căn' },
+  { value: 'ký_túc_xá',    label: 'Ký túc xá' },
 ]
 
 const PRICE_RANGES = [
-  { label: '< 1 triệu', min: 0,         max: 1_000_000  },
-  { label: '1–2 triệu', min: 1_000_000, max: 2_000_000  },
-  { label: '2–3 triệu', min: 2_000_000, max: 3_000_000  },
-  { label: '3–5 triệu', min: 3_000_000, max: 5_000_000  },
-  { label: '> 5 triệu', min: 5_000_000, max: 20_000_000 },
-  { label: 'Linh hoạt', min: 0,         max: 20_000_000 },
+  { label: 'Dưới 1 triệu', min: 0,         max: 1_000_000  },
+  { label: 'Từ 1–2 triệu', min: 1_000_000, max: 2_000_000  },
+  { label: 'Từ 2–3 triệu', min: 2_000_000, max: 3_000_000  },
+  { label: 'Từ 3–5 triệu', min: 3_000_000, max: 5_000_000  },
+  { label: 'Trên 5 triệu', min: 5_000_000, max: 20_000_000 },
+  { label: 'Linh hoạt',    min: 0,         max: 20_000_000 },
 ]
 
 const AREA_OPTIONS   = [10, 15, 20, 25, 30, 40]
@@ -35,18 +35,18 @@ const CAP_OPTIONS    = [{ value: 1, label: '1 người' }, { value: 2, label: '2
 const RADIUS_OPTIONS = [1, 3, 5, 10]
 
 const AMENITY_OPTIONS = [
-  { value: 'wifi',            label: 'Wifi',         emoji: '📶' },
-  { value: 'điều_hòa',       label: 'Điều hòa',     emoji: '❄️' },
-  { value: 'nóng_lạnh',      label: 'Nóng lạnh',    emoji: '🚿' },
-  { value: 'tủ_lạnh',        label: 'Tủ lạnh',      emoji: '🧊' },
-  { value: 'máy_giặt',       label: 'Máy giặt',     emoji: '🫧' },
-  { value: 'bếp',            label: 'Bếp nấu',      emoji: '🍳' },
-  { value: 'chỗ_để_xe',      label: 'Chỗ để xe',    emoji: '🏍️' },
-  { value: 'an_ninh',        label: 'An ninh',       emoji: '🔒' },
-  { value: 'ban_công',       label: 'Ban công',      emoji: '🌿' },
-  { value: 'nội_thất',       label: 'Nội thất',      emoji: '🛋️' },
-  { value: 'vệ_sinh_riêng',  label: 'VS riêng',      emoji: '🚽' },
-  { value: 'thang_máy',      label: 'Thang máy',     emoji: '🛗' },
+  { value: 'wifi',            label: 'Wifi' },
+  { value: 'điều_hòa',       label: 'Điều hòa' },
+  { value: 'nóng_lạnh',      label: 'Nóng lạnh' },
+  { value: 'tủ_lạnh',        label: 'Tủ lạnh' },
+  { value: 'máy_giặt',       label: 'Máy giặt' },
+  { value: 'bếp',            label: 'Bếp nấu' },
+  { value: 'chỗ_để_xe',      label: 'Chỗ để xe' },
+  { value: 'an_ninh',        label: 'An ninh' },
+  { value: 'ban_công',       label: 'Ban công' },
+  { value: 'nội_thất',       label: 'Nội thất' },
+  { value: 'vệ_sinh_riêng',  label: 'VS riêng' },
+  { value: 'thang_máy',      label: 'Thang máy' },
 ]
 
 // ── Slide animation ───────────────────────────────────────────────────────────
@@ -63,15 +63,14 @@ function Chip({ active, onClick, children, className }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
+        'flex items-center justify-center rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all h-10',
         active
-          ? 'border-primary bg-primary/10 text-primary shadow-sm'
-          : 'border-border hover:border-primary/40 hover:bg-muted/60',
+          ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+          : 'border-input bg-background hover:bg-muted text-foreground',
         className
       )}
     >
-      {children}
-      {active && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+      <span className="truncate">{children}</span>
     </button>
   )
 }
@@ -79,16 +78,19 @@ function Chip({ active, onClick, children, className }) {
 // ── Step components ───────────────────────────────────────────────────────────
 function Step1({ answers, set }) {
   return (
-    <div className="space-y-3">
-      <h3 className="font-semibold">Bạn muốn thuê loại phòng nào?</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {ROOM_TYPES.map(({ value, label, emoji }) => (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-foreground">Bạn muốn thuê loại phòng nào?</h3>
+        <p className="text-xs text-muted-foreground">Chọn một loại hình phòng trọ phù hợp nhất.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {ROOM_TYPES.map(({ value, label }) => (
           <Chip
             key={String(value)}
             active={answers.roomType === value}
             onClick={() => set('roomType', value)}
           >
-            <span>{emoji}</span> {label}
+            {label}
           </Chip>
         ))}
       </div>
@@ -101,9 +103,12 @@ function Step2({ answers, set }) {
     (r) => r.min === answers.priceMin && r.max === answers.priceMax
   )
   return (
-    <div className="space-y-3">
-      <h3 className="font-semibold">Ngân sách hàng tháng?</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-foreground">Ngân sách hàng tháng của bạn?</h3>
+        <p className="text-xs text-muted-foreground">Chọn khoảng giá thuê phù hợp với khả năng chi trả.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
         {PRICE_RANGES.map((r) => (
           <Chip
             key={r.label}
@@ -121,19 +126,25 @@ function Step2({ answers, set }) {
 function Step3({ answers, set }) {
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <h3 className="font-semibold">Diện tích tối thiểu?</h3>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-foreground">Diện tích tối thiểu?</h3>
+          <p className="text-xs text-muted-foreground">Chọn diện tích sử dụng mong muốn.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
           {AREA_OPTIONS.map((a) => (
             <Chip key={a} active={answers.areaMin === a} onClick={() => set('areaMin', a)}>
-              {a} m²
+              Từ {a} m²
             </Chip>
           ))}
         </div>
       </div>
-      <div className="space-y-2">
-        <h3 className="font-semibold">Số người ở?</h3>
-        <div className="flex gap-2">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-foreground">Số lượng người ở?</h3>
+          <p className="text-xs text-muted-foreground">Chọn quy mô thành viên lưu trú.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
           {CAP_OPTIONS.map(({ value, label }) => (
             <Chip key={value} active={answers.capacity === value} onClick={() => set('capacity', value)}>
               {label}
@@ -152,17 +163,19 @@ function Step4({ answers, set }) {
     set('amenities', next)
   }
   return (
-    <div className="space-y-3">
-      <h3 className="font-semibold">Tiện ích quan trọng với bạn?</h3>
-      <p className="text-xs text-muted-foreground">Chọn bao nhiêu tuỳ thích</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {AMENITY_OPTIONS.map(({ value, label, emoji }) => (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-bold text-foreground">Tiện ích cần thiết cho bạn?</h3>
+        <p className="text-xs text-muted-foreground">Chọn các tiện ích bạn muốn có ở phòng trọ.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {AMENITY_OPTIONS.map(({ value, label }) => (
           <Chip
             key={value}
             active={answers.amenities.includes(value)}
             onClick={() => toggle(value)}
           >
-            <span>{emoji}</span> {label}
+            {label}
           </Chip>
         ))}
       </div>
@@ -175,20 +188,22 @@ function Step5({ answers, set }) {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <h3 className="font-semibold">Khu vực muốn ở?</h3>
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-foreground">Khu vực tìm kiếm?</h3>
+          <p className="text-xs text-muted-foreground">Định vị vị trí học tập/làm việc để tính khoảng cách.</p>
+        </div>
         <Button
           type="button"
           variant={answers.lat ? 'default' : 'outline'}
-          className="gap-2 w-full sm:w-auto"
+          className="w-full rounded-xl text-xs h-10 font-semibold"
           onClick={() => setLocPickerOpen(true)}
         >
-          <MapPin className="h-4 w-4" />
-          {answers.lat ? '✅ Đã chọn vị trí của bạn' : 'Chọn vị trí của tôi'}
+          {answers.lat ? 'Đã thiết lập vị trí của bạn' : 'Chọn vị trí của bạn'}
         </Button>
         {answers.lat && (
-          <p className="text-xs text-muted-foreground">
-            ({answers.lat.toFixed(4)}, {answers.lng.toFixed(4)})
+          <p className="text-[10px] text-muted-foreground text-center">
+            Toạ độ: {answers.lat.toFixed(5)}, {answers.lng.toFixed(5)}
           </p>
         )}
         <LocationPickerDialog
@@ -198,9 +213,12 @@ function Step5({ answers, set }) {
         />
       </div>
 
-      <div className="space-y-2">
-        <h3 className="font-semibold">Bán kính tìm kiếm</h3>
-        <div className="flex gap-2">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-foreground">Bán kính di chuyển tối đa</h3>
+          <p className="text-xs text-muted-foreground">Khoảng cách tối đa từ trọ đến vị trí bạn chọn.</p>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
           {RADIUS_OPTIONS.map((r) => (
             <Chip key={r} active={answers.radius === r} onClick={() => set('radius', r)}>
               {r} km
@@ -268,28 +286,34 @@ export function RoomFinderWizard({ open, onClose }) {
   return (
     <>
       <Dialog open={open && !showResults} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" />
+        <DialogContent className="max-w-md overflow-hidden rounded-2xl p-6">
+          <DialogHeader className="space-y-1.5 pb-2">
+            <DialogTitle className="text-base font-bold tracking-tight text-foreground">
               Tìm trọ nhanh — Bước {step}/{TOTAL_STEPS}
             </DialogTitle>
+            <p className="text-[11px] text-muted-foreground font-normal leading-relaxed">
+              Trả lời các câu hỏi ngắn để hệ thống tìm kiếm phòng trọ tối ưu nhất cho nhu cầu của bạn.
+            </p>
           </DialogHeader>
 
           {/* Progress */}
-          <Progress value={(step / TOTAL_STEPS) * 100} className="h-1.5" />
-
-          {/* Step labels */}
-          <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
-            {STEPS.map(({ label }, i) => (
-              <span key={i} className={cn(i + 1 <= step && 'text-primary font-medium')}>
-                {label}
-              </span>
-            ))}
+          <div className="space-y-2 py-1">
+            <Progress value={(step / TOTAL_STEPS) * 100} className="h-1.5 rounded-full" />
+            
+            {/* Step labels */}
+            <div className="flex justify-between text-[9px] text-muted-foreground px-0.5 font-medium">
+              {STEPS.map(({ label }, i) => (
+                <span key={i} className={cn(i + 1 <= step ? 'text-primary font-bold' : 'opacity-70')}>
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
+          <Separator className="my-2" />
+
           {/* Step content with animation */}
-          <div className="relative min-h-[220px] overflow-hidden">
+          <div className="relative min-h-[260px] overflow-hidden py-2">
             <AnimatePresence mode="wait" custom={dir}>
               <motion.div
                 key={step}
@@ -298,7 +322,7 @@ export function RoomFinderWizard({ open, onClose }) {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.22, ease: 'easeInOut' }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="absolute inset-0 overflow-y-auto pb-2"
               >
                 {STEPS[step - 1].component}
@@ -306,22 +330,21 @@ export function RoomFinderWizard({ open, onClose }) {
             </AnimatePresence>
           </div>
 
+          <Separator className="my-2" />
+
           {/* Navigation */}
-          <div className="flex justify-between pt-2">
-            <Button variant="ghost" onClick={goPrev} disabled={step === 1} className="gap-1">
-              <ChevronLeft className="h-4 w-4" /> Quay lại
+          <div className="flex justify-between items-center pt-2">
+            <Button variant="ghost" onClick={goPrev} disabled={step === 1} className="rounded-xl text-xs h-9 px-4">
+              Quay lại
             </Button>
 
             {step < TOTAL_STEPS ? (
-              <Button onClick={goNext} className="gap-1">
-                Tiếp theo <ChevronRight className="h-4 w-4" />
+              <Button onClick={goNext} className="rounded-xl text-xs h-9 px-4">
+                Tiếp theo
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={loading} className="gap-2 min-w-[110px]">
-                {loading
-                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Đang tìm...</>
-                  : <><Sparkles className="h-4 w-4" /> Tìm phòng</>
-                }
+              <Button onClick={handleSubmit} disabled={loading} className="rounded-xl text-xs h-9 px-5 font-semibold">
+                {loading ? 'Đang tìm...' : 'Tìm phòng ngay'}
               </Button>
             )}
           </div>
@@ -332,6 +355,7 @@ export function RoomFinderWizard({ open, onClose }) {
       <WizardResultsSheet
         open={showResults}
         rooms={results || []}
+        userLocation={answers.lat && answers.lng ? { lat: answers.lat, lng: answers.lng } : null}
         onClose={() => { setShowResults(false); handleClose() }}
         onRetry={() => setShowResults(false)}
       />

@@ -2,6 +2,7 @@ const Conversation = require('../models/Conversation')
 const Message = require('../models/Message')
 const mongoose = require('mongoose')
 const sendResponse = require('../utils/apiResponse')
+const { recordInteraction } = require('./interactionController')
 
 // GET /api/conversations
 exports.getConversations = async (req, res) => {
@@ -64,6 +65,11 @@ exports.createConversation = async (req, res) => {
       conversation = await Conversation.findById(conversation._id)
         .populate('participants', 'name avatar role')
         .populate('room', 'title slug images')
+    }
+
+    // Ghi nhận tương tác 'chat' nếu liên quan đến phòng
+    if (validRoomId) {
+      recordInteraction(req.user._id, validRoomId, 'chat').catch(() => {})
     }
 
     return sendResponse(res, 200, true, 'OK', { conversation })

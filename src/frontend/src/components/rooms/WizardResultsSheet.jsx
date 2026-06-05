@@ -1,44 +1,75 @@
 import { Link } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Sheet } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { RoomCard } from '@/components/rooms/RoomCard'
 
-export function WizardResultsSheet({ open, rooms, onClose, onRetry }) {
-  const titleNode = (
-    <div className="flex items-center justify-between w-full pr-4">
-      <span className="flex items-center gap-2">
-        <span className="text-xl">🏠</span>
-        <span>
-          Tìm được <span className="text-primary">{rooms.length}</span> phòng phù hợp
-        </span>
-      </span>
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={onRetry}>
-          <RefreshCw className="h-3.5 w-3.5" /> Sửa tiêu chí
-        </Button>
-        <Button size="sm" variant="ghost" className="h-8 text-xs" asChild>
-          <Link to="/search" onClick={onClose}>Xem tất cả →</Link>
-        </Button>
-      </div>
-    </div>
-  )
+function calcDistance(userLoc, roomCoords) {
+  if (!userLoc || !roomCoords || roomCoords.length < 2) return undefined
+  const [lng2, lat2] = roomCoords
+  const { lat: lat1, lng: lng1 } = userLoc
+  const radius = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  const km = radius * 2 * Math.asin(Math.sqrt(Math.min(1, a)))
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
+}
 
+export function WizardResultsSheet({ open, rooms, onClose, onRetry, userLocation }) {
   return (
-    <Sheet open={open} onClose={onClose} side="right" title={titleNode}>
-      <div className="space-y-3 pb-6">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl overflow-hidden rounded-2xl p-6">
+        <DialogHeader className="space-y-1 pb-2">
+          <DialogTitle className="text-base font-bold tracking-tight text-foreground">
+            Gợi ý phòng phù hợp
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            Tìm được <span className="font-semibold text-primary">{rooms.length}</span> phòng trọ phù hợp nhất với tiêu chí của bạn.
+          </p>
+        </DialogHeader>
+
         {rooms.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
-            <span className="text-5xl">😔</span>
-            <p className="text-sm">Không tìm thấy phòng phù hợp với tiêu chí của bạn.</p>
-            <Button variant="outline" onClick={onRetry} className="gap-2 mt-1">
-              <RefreshCw className="h-4 w-4" /> Thử lại với tiêu chí khác
+          <div className="flex flex-col items-center gap-4 py-16 text-center text-muted-foreground">
+            <p className="text-sm font-semibold text-foreground">Không tìm thấy phòng phù hợp</p>
+            <p className="text-xs max-w-xs leading-relaxed text-muted-foreground">
+              Không tìm thấy phòng trọ nào phù hợp với tiêu chí hiện tại của bạn.
+            </p>
+            <Button variant="outline" onClick={onRetry} className="rounded-xl h-9 text-xs px-4 mt-2 font-semibold">
+              Thử lại với tiêu chí khác
             </Button>
           </div>
         ) : (
-          rooms.map((room) => <RoomCard key={room._id} room={room} view="list" />)
+          <div className="max-h-[55vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {rooms.map((room) => (
+                <RoomCard
+                  key={room._id}
+                  room={room}
+                  view="grid"
+                  distanceText={calcDistance(userLocation, room.location?.coordinates)}
+                />
+              ))}
+            </div>
+          </div>
         )}
-      </div>
-    </Sheet>
+
+        <div className="flex items-center justify-between border-t pt-4 mt-2">
+          <Button variant="ghost" className="rounded-xl text-xs h-9 px-4 font-semibold" onClick={onClose}>
+            Đóng
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="rounded-xl text-xs h-9 px-4 font-semibold" onClick={onRetry}>
+              Sửa tiêu chí
+            </Button>
+            <Button className="rounded-xl text-xs h-9 px-4 font-semibold" asChild>
+              <Link to="/search" onClick={onClose}>
+                Xem tất cả
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

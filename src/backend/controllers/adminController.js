@@ -1,5 +1,6 @@
 const Room = require('../models/Room')
 const User = require('../models/User')
+const Notification = require('../models/Notification')
 const sendResponse = require('../utils/apiResponse')
 const { createNotification } = require('./notificationController')
 
@@ -291,6 +292,74 @@ exports.adminGetStats = async (req, res) => {
     return sendResponse(res, 200, true, 'Thống kê hệ thống', {
       totalRooms, pendingRooms, totalUsers, pendingComments, topRooms, monthlyData,
     })
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message)
+  }
+}
+
+// POST /api/admin/notifications
+exports.adminSendNotification = async (req, res) => {
+  try {
+    const { title, body, target, userId, link } = req.body
+    if (!title || !body || !target) {
+      return sendResponse(res, 400, false, 'Vui lòng điền đầy đủ tiêu đề, nội dung và đối tượng nhận thông báo')
+    }
+
+    const io = req.app.get('io')
+
+    if (target === 'specific') {
+      if (!userId) {
+        return sendResponse(res, 400, false, 'Vui lòng cung cấp ID người nhận')
+      }
+      const user = await User.findById(userId)
+      if (!user) {
+        return sendResponse(res, 404, false, 'Không tìm thấy người dùng này')
+      }
+
+      await createNotification({
+        userId,
+        type: 'system',
+        title,
+        body,
+        link: link || null,
+        io,
+      })
+
+      return sendResponse(res, 200, true, 'Đã gửi thông báo tới người dùng thành công')
+    }
+
+    // Target filters
+    const query = {}
+    if (target === 'student') query.role = 'student'
+    else if (target === 'landlord') query.role = 'landlord'
+    else if (target === 'all') query.role = { $in: ['student', 'landlord', 'admin'] }
+    else {
+      return sendResponse(res, 400, false, 'Đối tượng nhận thông báo không hợp lệ')
+    }
+
+    const users = await User.find(query).select('_id')
+    if (users.length === 0) {
+      return sendResponse(res, 200, true, 'Không có người dùng nào phù hợp với bộ lọc để gửi thông báo')
+    }
+
+    const notificationsData = users.map((u) => ({
+      user: u._id,
+      type: 'system',
+      title,
+      body,
+      link: link || null,
+      isRead: false,
+    }))
+
+    const createdNotifications = await Notification.insertMany(notificationsData)
+
+    if (io) {
+      createdNotifications.forEach((n) => {
+        io.to(`user:${String(n.user)}`).emit('new_notification', n)
+      })
+    }
+
+    return sendResponse(res, 200, true, `Đã gửi thông báo thành công tới ${users.length} người dùng`)
   } catch (error) {
     return sendResponse(res, 500, false, error.message)
   }

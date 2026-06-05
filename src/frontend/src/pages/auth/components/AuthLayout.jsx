@@ -148,15 +148,15 @@ export function AuthShell({
 
 export function AuthCard({ icon: Icon, title, description, children }) {
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-2xl border-muted/80 shadow-sm bg-card">
       <CardHeader className="space-y-2 pb-4">
         {Icon && (
-          <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl border bg-primary/10 text-primary">
+          <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl border bg-primary/5 text-primary">
             <Icon className="h-5 w-5" />
           </div>
         )}
-        <CardTitle className="text-2xl">{title}</CardTitle>
-        {description && <CardDescription className="leading-relaxed">{description}</CardDescription>}
+        <CardTitle className="text-xl font-bold text-foreground">{title}</CardTitle>
+        {description && <CardDescription className="leading-relaxed text-xs">{description}</CardDescription>}
       </CardHeader>
       {children}
     </Card>
@@ -165,24 +165,24 @@ export function AuthCard({ icon: Icon, title, description, children }) {
 
 export function AuthStatusCard({ icon: Icon, tone = 'primary', title, description, children }) {
   const toneClass = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-    error: 'bg-destructive/10 text-destructive',
+    primary: 'bg-primary/5 text-primary border-primary/10',
+    success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-500/10',
+    error: 'bg-destructive/5 text-destructive border-destructive/10',
   }[tone]
 
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-2xl border-muted/80 shadow-sm bg-card">
       <CardContent className="space-y-6 px-6 py-10 text-center">
         {Icon && (
           <div className="flex justify-center">
-            <div className={cn('flex h-16 w-16 items-center justify-center rounded-xl', toneClass)}>
+            <div className={cn('flex h-16 w-16 items-center justify-center rounded-2xl border', toneClass)}>
               <Icon className="h-8 w-8" />
             </div>
           </div>
         )}
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {description && <p className="text-sm leading-6 text-muted-foreground">{description}</p>}
+          <h1 className="text-xl font-bold tracking-tight text-foreground">{title}</h1>
+          {description && <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>}
         </div>
         {children}
       </CardContent>
@@ -192,11 +192,11 @@ export function AuthStatusCard({ icon: Icon, tone = 'primary', title, descriptio
 
 export function FormField({ id, label, error, children }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id} className={cn(error && 'text-destructive font-medium')}>{label}</Label>
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className={cn('text-xs font-semibold text-foreground', error && 'text-destructive')}>{label}</Label>
       {children}
       {error && (
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive mt-1 animate-fade-in">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold text-destructive mt-1 animate-fade-in">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           {error}
         </p>
@@ -224,7 +224,7 @@ export function PasswordField({
           autoComplete={autoComplete}
           placeholder={placeholder}
           className={cn(
-            'h-11 rounded-lg pr-11 transition-all duration-300',
+            'h-11 rounded-xl pr-11 transition-all duration-300',
             error ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
           )}
           {...register}
@@ -232,7 +232,7 @@ export function PasswordField({
         <button
           type="button"
           onClick={onToggle}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
         >
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -244,7 +244,7 @@ export function PasswordField({
 
 export function SubmitButton({ id, loading, loadingText, children, disabled }) {
   return (
-    <Button id={id} type="submit" className="h-11 w-full rounded-lg" disabled={disabled || loading}>
+    <Button id={id} type="submit" className="h-11 w-full rounded-xl font-semibold" disabled={disabled || loading}>
       {loading ? loadingText : children}
     </Button>
   )

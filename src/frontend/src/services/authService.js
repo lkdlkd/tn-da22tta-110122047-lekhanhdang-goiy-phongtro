@@ -28,3 +28,7 @@ export const getMeApi = () => axiosInstance.get('/api/auth/me')
 
 // Đăng nhập/Đăng ký Google qua credential hoặc accessToken
 export const googleLoginApi = (data) => axiosInstance.post('/api/auth/google', data)
+
+// Gửi lại email xác thực
+export const resendVerificationApi = (email) =>
+  axiosInstance.post('/api/auth/resend-verification', { email })

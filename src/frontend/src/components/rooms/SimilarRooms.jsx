@@ -28,7 +28,7 @@ function formatDistance(km) {
 // ── Skeleton loader ───────────────────────────────────────────────────────────
 function SimilarSkeleton({ count = 6 }) {
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="rounded-2xl border overflow-hidden">
           <Skeleton className="aspect-[16/10] w-full" />
@@ -86,7 +86,7 @@ export function SimilarRooms({ roomId, limit = 6, targetLocation }) {
       {loading ? (
         <SimilarSkeleton count={limit} />
       ) : (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {rooms.map((room) => {
             // Tính khoảng cách từ phòng gốc đến phòng gợi ý
             const coords = room.location?.coordinates  // [lng, lat]

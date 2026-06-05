@@ -79,7 +79,7 @@ function buildMongoFilter({ roomType, priceMin, priceMax, areaMin, capacity, lat
 async function fetchUserHistory(userId) {
   const interactions = await Interaction.find({
     user: userId,
-    type: { $in: ['view', 'save'] },
+    type: { $in: ['view', 'save', 'chat', 'booking'] },
   })
     .sort({ createdAt: -1 })
     .limit(30)
@@ -341,9 +341,16 @@ exports.forYouRecommend = async (req, res) => {
       return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
     }
 
-    // ── Bước 5: Tính behavior score ──────────────────────────────────────
-    const favMap = await buildBehaviorMap(rawCandidates.map(r => r._id))
-    const plainCandidates = attachBehavior(rawCandidates.map(serializeRoom), favMap)
+    // ── Bước 5: Tính behavior score & loại trừ phòng đã tương tác ─────────────────
+    const historyRoomIds = new Set(userHistory.map(h => h.roomId))
+    const filteredCandidates = rawCandidates.filter(r => !historyRoomIds.has(String(r._id)))
+
+    if (!filteredCandidates.length) {
+      return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
+    }
+
+    const favMap = await buildBehaviorMap(filteredCandidates.map(r => r._id))
+    const plainCandidates = attachBehavior(filteredCandidates.map(serializeRoom), favMap)
 
     // ── Bước 6: Gửi FastAPI /for-you với userHistory ─────────────────────
     const criteria = { roomType, priceMin, priceMax, areaMin, capacity, amenities, radius }

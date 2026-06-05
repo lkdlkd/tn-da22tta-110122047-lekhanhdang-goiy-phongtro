@@ -23,6 +23,8 @@ import RoomDetailPage from '@/pages/rooms/RoomDetailPage'
 import SearchPage from '@/pages/search/SearchPage'
 import HomePage from '@/pages/home/HomePage'
 import RecommendPage from '@/pages/recommend/RecommendPage'
+import AboutPage from '@/pages/about/AboutPage'
+import ContactPage from '@/pages/contact/ContactPage'
 
 // Phase 5-9 Pages
 import FavoritesPage from '@/pages/favorites/FavoritesPage'
@@ -44,6 +46,8 @@ import AdminRoomsPage from '@/pages/admin/AdminRoomsPage'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import AdminCommentsPage from '@/pages/admin/AdminCommentsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
+import AdminAppointmentsPage from '@/pages/admin/AdminAppointmentsPage'
+import AdminNotificationsPage from '@/pages/admin/AdminNotificationsPage'
 
 const NotFoundPage = () => (
   <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center px-4">
@@ -100,6 +104,8 @@ export default function App() {
           <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
           <Route path="/search" element={<AppLayout><SearchPage /></AppLayout>} />
           <Route path="/recommend" element={<AppLayout><RecommendPage /></AppLayout>} />
+          <Route path="/about" element={<AppLayout><AboutPage /></AppLayout>} />
+          <Route path="/contact" element={<AppLayout><ContactPage /></AppLayout>} />
           <Route path="/rooms/:slug" element={<AppLayout><RoomDetailPage /></AppLayout>} />
           <Route path="/landlord/:username" element={<AppLayout><LandlordProfilePage /></AppLayout>} />
 
@@ -129,8 +135,10 @@ export default function App() {
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/rooms" element={<AdminRoomsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
               <Route path="/admin/comments" element={<AdminCommentsPage />} />
               <Route path="/admin/reports" element={<AdminReportsPage />} />
+              <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
             </Route>
           </Route>
 

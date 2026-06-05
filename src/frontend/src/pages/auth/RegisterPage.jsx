@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast } from 'sonner'
-import { registerApi, finalizeRoleApi, googleLoginApi } from '@/services/authService'
+import { registerApi, finalizeRoleApi, googleLoginApi, resendVerificationApi } from '@/services/authService'
 import { loginSuccess } from '@/features/auth/authSlice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +54,7 @@ function RoleOption({ active, icon: Icon, title, description, onClick, id, disab
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex min-h-28 flex-col items-start gap-2 rounded-lg border p-4 text-left transition-all',
+        'flex min-h-28 flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all',
         active
           ? 'border-primary bg-primary/10 text-primary shadow-sm'
           : 'border-border bg-background hover:border-primary/50 hover:bg-muted/40',
@@ -79,6 +79,26 @@ export default function RegisterPage() {
   const [roleLoading, setRoleLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [googleTokenVal, setGoogleTokenVal] = useState('')
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown === 0) return
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [countdown])
+
+  const handleResend = async () => {
+    if (countdown > 0) return
+    try {
+      await resendVerificationApi(pendingEmail)
+      toast.success('Đã gửi lại email xác thực!')
+      setCountdown(60)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gửi lại email thất bại')
+    }
+  }
 
   const {
     register,
@@ -92,7 +112,7 @@ export default function RegisterPage() {
     setApiError('')
     try {
       const res = await registerApi(data)
-      
+
       // Nếu là Admin / User đầu tiên, backend đã trả về Token để đăng nhập trực tiếp
       if (res.data?.data?.token) {
         dispatch(loginSuccess(res.data.data))
@@ -231,9 +251,20 @@ export default function RegisterPage() {
               Liên kết có hiệu lực trong 24 giờ. Nếu không thấy email, vui lòng kiểm tra thư mục Spam hoặc Junk.
             </p>
           </div>
-          <Button variant="outline" asChild className="h-11 w-full rounded-lg">
-            <Link to="/login">Quay lại đăng nhập</Link>
-          </Button>
+          <div className="flex flex-col gap-2 mt-4 w-full">
+            <Button
+              type="button"
+              onClick={handleResend}
+              disabled={countdown > 0}
+              variant="outline"
+              className="h-11 w-full rounded-xl text-xs font-semibold"
+            >
+              {countdown > 0 ? `Gửi lại sau (${countdown}s)` : 'Gửi lại email xác thực'}
+            </Button>
+            <Button variant="ghost" asChild className="h-11 w-full rounded-xl text-xs font-semibold">
+              <Link to="/login">Quay lại đăng nhập</Link>
+            </Button>
+          </div>
         </AuthStatusCard>
       )}
 
@@ -293,7 +324,7 @@ export default function RegisterPage() {
                 id="btn-google-register"
                 type="button"
                 variant="outline"
-                className="h-11 w-full rounded-lg"
+                className="h-11 w-full rounded-xl"
                 onClick={handleGoogleRegister}
               >
                 <GoogleIcon className="h-4 w-4" />
@@ -310,7 +341,7 @@ export default function RegisterPage() {
               </div>
 
               {apiError && (
-                <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 animate-fade-in">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
                   <div className="flex-1 font-semibold leading-relaxed">{apiError}</div>
                 </div>
@@ -322,7 +353,7 @@ export default function RegisterPage() {
                   autoComplete="name"
                   placeholder="Nguyễn Văn A"
                   className={cn(
-                    'h-11 rounded-lg transition-all duration-300',
+                    'h-11 rounded-xl transition-all duration-300',
                     errors.name ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
                   )}
                   {...register('name')}
@@ -336,7 +367,7 @@ export default function RegisterPage() {
                   autoComplete="email"
                   placeholder="example@email.com"
                   className={cn(
-                    'h-11 rounded-lg transition-all duration-300',
+                    'h-11 rounded-xl transition-all duration-300',
                     errors.email ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
                   )}
                   {...register('email')}
@@ -360,7 +391,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   placeholder="••••••••"
                   className={cn(
-                    'h-11 rounded-lg transition-all duration-300',
+                    'h-11 rounded-xl transition-all duration-300',
                     errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : 'focus-visible:ring-primary'
                   )}
                   {...register('confirmPassword')}

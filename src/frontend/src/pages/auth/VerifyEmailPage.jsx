@@ -70,7 +70,7 @@ export default function VerifyEmailPage() {
           <p className="text-sm leading-6 text-muted-foreground">
             Tài khoản chủ trọ của bạn đã được kích hoạt. Bạn có thể đăng nhập để bắt đầu đăng tin phòng trọ.
           </p>
-          <Button asChild className="h-11 w-full rounded-lg" id="btn-verify-login">
+          <Button asChild className="h-11 w-full rounded-xl" id="btn-verify-login">
             <Link to="/login">Đăng nhập ngay</Link>
           </Button>
         </AuthStatusCard>
@@ -83,15 +83,15 @@ export default function VerifyEmailPage() {
           title="Xác thực thất bại"
           description={message}
         >
-          <div className="rounded-lg border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
+          <div className="rounded-xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
             <TimerReset className="mx-auto mb-2 h-5 w-5 text-primary" />
             Liên kết xác thực thường chỉ có hiệu lực trong 24 giờ. Vui lòng đăng ký lại nếu liên kết đã hết hạn.
           </div>
           <div className="flex flex-col gap-2">
-            <Button asChild variant="outline" className="h-11 w-full rounded-lg">
+            <Button asChild variant="outline" className="h-11 w-full rounded-xl">
               <Link to="/register">Đăng ký lại</Link>
             </Button>
-            <Button asChild variant="ghost" className="h-11 w-full rounded-lg">
+            <Button asChild variant="ghost" className="h-11 w-full rounded-xl">
               <Link to="/">Về trang chủ</Link>
             </Button>
           </div>

@@ -7,10 +7,6 @@ export const updateProfileApi = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Lưu tiêu chí tìm phòng (JSON — không cần FormData)
-export const updatePreferencesApi = (preferences) =>
-  axiosInstance.put('/api/users/profile', { preferences })
-
 export const changePasswordApi = (data) => axiosInstance.put('/api/users/change-password', data)
 
 // Public — không cần đăng nhập

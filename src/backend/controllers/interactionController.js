@@ -7,7 +7,7 @@ const sendResponse = require('../utils/apiResponse')
  *   view : 100 lần gần nhất (dùng phân tích nội dung phòng đã xem)
  *   save : 50  lần gần nhất (intent mạnh hơn view)
  */
-const MAX_PER_TYPE = { view: 100, save: 50 }
+const MAX_PER_TYPE = { view: 100, save: 50, chat: 30, booking: 20 }
 
 /**
  * Hàm nội bộ: ghi interaction + trim nếu vượt giới hạn.

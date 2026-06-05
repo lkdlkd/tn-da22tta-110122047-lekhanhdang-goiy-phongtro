@@ -17,15 +17,10 @@ exports.getProfile = async (req, res) => {
 // PUT /api/users/profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, phone, preferences } = req.body
+    const { name, phone } = req.body
     const updateData = {}
     if (name?.trim()) updateData.name = name.trim()
     if (phone !== undefined) updateData.phone = phone?.trim() || null
-    if (preferences) {
-      try {
-        updateData.preferences = typeof preferences === 'string' ? JSON.parse(preferences) : preferences
-      } catch { /* ignore parse error */ }
-    }
 
     // Upload avatar nếu có file mới — xóa avatar cũ trước
     if (req.file?.buffer) {

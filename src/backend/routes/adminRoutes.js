@@ -5,7 +5,7 @@ const {
   adminHideRoom, adminDeleteRoom, adminRestoreRoom,
   adminGetUsers, adminBanUser, adminUnbanUser,
   adminUpdateUser, adminResetPassword, adminDeleteUser,
-  adminGetStats,
+  adminGetStats, adminSendNotification,
 } = require('../controllers/adminController')
 const { adminGetComments, adminApproveComment, adminRejectComment, adminDeleteComment } = require('../controllers/commentController')
 
@@ -32,5 +32,7 @@ router.get('/comments', adminGetComments)
 router.put('/comments/:id/approve', adminApproveComment)
 router.put('/comments/:id/reject', adminRejectComment)
 router.delete('/comments/:id', adminDeleteComment)
+
+router.post('/notifications', adminSendNotification)
 
 module.exports = router

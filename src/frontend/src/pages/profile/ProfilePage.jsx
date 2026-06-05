@@ -150,7 +150,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
-  const [form, setForm] = useState({ name: '', phone: '', preferences: { maxPrice: '', minArea: '', district: '' } })
+  const [form, setForm] = useState({ name: '', phone: '' })
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false })
   const [saving, setSaving] = useState(false)
@@ -171,11 +171,6 @@ export default function ProfilePage() {
         setForm({
           name: profile.name || '',
           phone: profile.phone || '',
-          preferences: {
-            maxPrice: profile.preferences?.maxPrice || '',
-            minArea: profile.preferences?.minArea || '',
-            district: profile.preferences?.district || '',
-          },
         })
       })
       .catch((err) => {
@@ -215,11 +210,6 @@ export default function ProfilePage() {
       const payload = new FormData()
       payload.append('name', form.name.trim())
       payload.append('phone', form.phone.trim())
-      payload.append('preferences', JSON.stringify({
-        maxPrice: Number(form.preferences.maxPrice) || null,
-        minArea: Number(form.preferences.minArea) || null,
-        district: form.preferences.district.trim() || null,
-      }))
       if (avatarFile) payload.append('avatar', avatarFile)
       const res = await updateProfileApi(payload)
       const updated = res.data?.data?.user
@@ -228,11 +218,6 @@ export default function ProfilePage() {
         setForm({
           name: updated.name || '',
           phone: updated.phone || '',
-          preferences: {
-            maxPrice: updated.preferences?.maxPrice || '',
-            minArea: updated.preferences?.minArea || '',
-            district: updated.preferences?.district || '',
-          },
         })
       }
       setAvatarFile(null)
@@ -352,26 +337,6 @@ export default function ProfilePage() {
                     </div>
                     <Field label="Email" icon={Mail} id="profile-email" hint="Email không thể thay đổi">
                       <Input id="profile-email" value={user.email} disabled className="opacity-70" />
-                    </Field>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      Sở thích tìm phòng
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 sm:grid-cols-3">
-                    <Field label="Giá tối đa" id="pref-price">
-                      <Input id="pref-price" type="number" min="0" value={form.preferences.maxPrice} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, maxPrice: event.target.value } }))} placeholder="3000000" />
-                    </Field>
-                    <Field label="Diện tích tối thiểu" id="pref-area">
-                      <Input id="pref-area" type="number" min="0" value={form.preferences.minArea} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, minArea: event.target.value } }))} placeholder="15" />
-                    </Field>
-                    <Field label="Khu vực ưu tiên" icon={MapPin} id="pref-district">
-                      <Input id="pref-district" value={form.preferences.district} onChange={(event) => setForm((prev) => ({ ...prev, preferences: { ...prev.preferences, district: event.target.value } }))} placeholder="Vĩnh Long" />
                     </Field>
                   </CardContent>
                 </Card>

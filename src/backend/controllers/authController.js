@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const User = require('../models/User')
-const { sendEmail } = require('../services/emailService')
+const { sendEmail, buildHtmlTemplate } = require('../services/emailService')
 const sendResponse = require('../utils/apiResponse')
 // Helper tạo JWT
 const signToken = (id) => {
@@ -116,14 +116,26 @@ exports.finalizeRole = async (req, res) => {
     await user.save({ validateBeforeSave: false })
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`
+
+    const emailHtml = buildHtmlTemplate(
+      'Xác thực Email',
+      `
+        <p>Xin chào <strong>${user.name}</strong>,</p>
+        <p>Cảm ơn bạn đã đăng ký tài khoản <strong>Chủ trọ</strong> tại hệ thống <strong>PhòngTrọ Vĩnh Long</strong>.</p>
+        <p>Để hoàn tất quá trình đăng ký và bắt đầu đăng tin cho thuê phòng trọ, vui lòng nhấp vào nút xác thực dưới đây:</p>
+        <div class="accent-box">
+          <p><strong>Lưu ý:</strong> Liên kết xác thực này chỉ có hiệu lực trong vòng <strong>24 giờ</strong>. Nếu quá thời gian trên, bạn sẽ cần thực hiện lại quy trình đăng ký.</p>
+        </div>
+      `,
+      'Xác thực tài khoản',
+      verifyUrl
+    )
+
     // Gửi email xác thực trong background, tránh block API dẫn đến timeout
     sendEmail({
       to: user.email,
-      subject: '✅ Xác thực email — PhòngTrọ VL',
-      html: `<p>Chào ${user.name},</p>
-             <p>Cảm ơn bạn đã đăng ký tài khoản <strong>Chủ trọ</strong>.</p>
-             <p>Vui lòng <a href="${verifyUrl}">click vào đây</a> để xác thực email và bắt đầu đăng tin phòng trọ.</p>
-             <p>Link có hiệu lực trong <strong>24 giờ</strong>.</p>`,
+      subject: '[PhòngTrọ Vĩnh Long] Xác thực địa chỉ Email của bạn',
+      html: emailHtml,
     }).catch((emailErr) => {
       console.error('Không thể gửi email xác thực trong background:', emailErr.message)
     })
@@ -221,11 +233,26 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false })
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+
+    const emailHtml = buildHtmlTemplate(
+      'Đặt lại mật khẩu',
+      `
+        <p>Xin chào <strong>${user.name}</strong>,</p>
+        <p>Chúng tôi nhận được yêu cầu thiết lập lại mật khẩu cho tài khoản liên kết với email này trên hệ thống <strong>PhòngTrọ Vĩnh Long</strong>.</p>
+        <p>Để đặt mật khẩu mới, vui lòng nhấp vào nút bên dưới:</p>
+        <div class="accent-box">
+          <p><strong>Lưu ý quan trọng:</strong> Đường dẫn này chỉ có hiệu lực trong vòng <strong>1 giờ</strong>. Nếu không phải bạn gửi yêu cầu này, vui lòng bỏ qua email này để giữ an toàn cho tài khoản.</p>
+        </div>
+      `,
+      'Đặt lại mật khẩu',
+      resetUrl
+    )
+
     // Gửi email đặt lại mật khẩu trong background, tránh block API dẫn đến timeout
     sendEmail({
       to: user.email,
-      subject: '🔑 Đặt lại mật khẩu — PhòngTrọ VL',
-      html: `<p>Chào ${user.name},</p><p>Vui lòng <a href="${resetUrl}">click vào đây</a> để đặt lại mật khẩu. Link có hiệu lực trong 1 giờ.</p>`,
+      subject: '[PhòngTrọ Vĩnh Long] Yêu cầu khôi phục mật khẩu',
+      html: emailHtml,
     }).catch((emailErr) => {
       console.error('Không thể gửi email đặt lại mật khẩu trong background:', emailErr.message)
     })
@@ -431,6 +458,56 @@ exports.googleLoginApi = async (req, res) => {
   } catch (error) {
     console.error('Google API Login Error:', error)
     sendResponse(res, 401, false, 'Xác thực tài khoản Google thất bại: ' + error.message)
+  }
+}
+
+// POST /api/auth/resend-verification
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return sendResponse(res, 400, false, 'Vui lòng cung cấp email')
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+
+    if (user && user.isEmailVerified) {
+      return sendResponse(res, 400, false, 'Tài khoản này đã được xác thực email. Vui lòng đăng nhập.')
+    }
+
+    if (user) {
+      const verifyToken = user.createEmailVerifyToken()
+      await user.save({ validateBeforeSave: false })
+
+      const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`
+
+      const emailHtml = buildHtmlTemplate(
+        'Xác thực Email',
+        `
+          <p>Xin chào <strong>${user.name}</strong>,</p>
+          <p>Cảm ơn bạn đã đăng ký tài khoản <strong>Chủ trọ</strong> tại hệ thống <strong>PhòngTrọ Vĩnh Long</strong>.</p>
+          <p>Để hoàn tất quá trình đăng ký và bắt đầu đăng tin cho thuê phòng trọ, vui lòng nhấp vào nút xác thực dưới đây:</p>
+          <div class="accent-box">
+            <p><strong>Lưu ý:</strong> Liên kết xác thực này chỉ có hiệu lực trong vòng <strong>24 giờ</strong>. Nếu quá thời gian trên, bạn sẽ cần thực hiện lại quy trình đăng ký.</p>
+          </div>
+        `,
+        'Xác thực tài khoản',
+        verifyUrl
+      )
+
+      sendEmail({
+        to: user.email,
+        subject: '[PhòngTrọ Vĩnh Long] Xác thực địa chỉ Email của bạn',
+        html: emailHtml,
+      }).catch((emailErr) => {
+        console.error('Không thể gửi email xác thực trong background:', emailErr.message)
+      })
+    }
+
+    sendResponse(res, 200, true, 'Email xác thực mới đã được gửi. Vui lòng kiểm tra hộp thư của bạn.')
+  } catch (error) {
+    sendResponse(res, 500, false, error.message)
   }
 }
 

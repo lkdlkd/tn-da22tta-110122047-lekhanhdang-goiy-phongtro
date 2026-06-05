@@ -61,18 +61,6 @@ const userSchema = new mongoose.Schema(
       default: null,
       sparse: true,
     },
-    // Preferences cho trang "Gợi ý cho bạn"
-    preferences: {
-      roomType:  { type: String, default: null },
-      priceMin:  { type: Number, default: 0 },
-      priceMax:  { type: Number, default: 20_000_000 },
-      areaMin:   { type: Number, default: 10 },
-      capacity:  { type: Number, default: 1 },
-      amenities: { type: [String], default: [] },
-      lat:       { type: Number, default: null },
-      lng:       { type: Number, default: null },
-      radius:    { type: Number, default: 5 },
-    },
     // ── Thống kê phản hồi tin nhắn (dành cho landlord) ──────────────────
     responseRate: { type: Number, default: null, min: 0, max: 100 }, // %
     avgResponseTime: { type: Number, default: null },                 // phút

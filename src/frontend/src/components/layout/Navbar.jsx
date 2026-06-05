@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { MessageDropdown } from '@/components/chat/MessageDropdown'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
@@ -117,6 +118,132 @@ function LandlordDropdown() {
             <Building2 className="h-4 w-4" />
             Đăng phòng mới
           </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UserDropdown({ user, handleLogout, unreadMsgs }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const location = useLocation()
+
+  useEffect(() => { setOpen(false) }, [location.pathname])
+  useEffect(() => {
+    if (!open) return
+    const handler = (event) => {
+      if (!ref.current?.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((val) => !val)}
+        className="hidden h-9 items-center gap-2 rounded-lg border px-2 md:inline-flex"
+      >
+        {user?.avatar ? (
+          <img src={user.avatar} className="h-6 w-6 rounded-full object-cover" alt="" />
+        ) : (
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {(user?.name || 'U')[0].toUpperCase()}
+          </span>
+        )}
+        <span className="max-w-24 truncate text-xs font-medium">{user?.name?.split(' ').pop() || 'Tôi'}</span>
+        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform text-muted-foreground', open && 'rotate-180')} />
+      </Button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border bg-background p-1.5 shadow-lg">
+          <div className="px-3 py-2 text-left">
+            <p className="truncate text-sm font-semibold">{user?.name || 'Tài khoản'}</p>
+            <p className="truncate text-[10px] text-muted-foreground">{user?.email || ''}</p>
+          </div>
+          <Separator className="my-1" />
+
+          <Link
+            to="/profile"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+          >
+            <User className="h-4 w-4" />
+            Trang cá nhân
+          </Link>
+
+          <Link
+            to="/messages"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="flex-1">Tin nhắn</span>
+            {unreadMsgs > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
+                {unreadMsgs > 9 ? '9+' : unreadMsgs}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            to="/appointments"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+          >
+            <Calendar className="h-4 w-4" />
+            Lịch hẹn
+          </Link>
+
+          <Link
+            to="/favorites"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+          >
+            <Heart className="h-4 w-4" />
+            Yêu thích
+          </Link>
+
+          {user?.role === 'landlord' && (
+            <>
+              <Separator className="my-1" />
+              <Link
+                to="/landlord/dashboard"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Tổng quan chủ trọ
+              </Link>
+              <Link
+                to="/landlord/rooms"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Building2 className="h-4 w-4" />
+                Quản lý phòng
+              </Link>
+            </>
+          )}
+
+          {user?.role === 'admin' && (
+            <>
+              <Separator className="my-1" />
+              <Link
+                to="/admin"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Shield className="h-4 w-4" />
+                Quản trị hệ thống
+              </Link>
+            </>
+          )}
+
+          <Separator className="my-1" />
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Đăng xuất
+          </button>
         </div>
       )}
     </div>
@@ -249,43 +376,14 @@ export function Navbar() {
 
         {isAuth ? (
           <>
-            <Button variant="ghost" size="icon" className="hidden h-9 w-9 rounded-lg md:inline-flex relative" asChild>
-              <Link to="/messages" title="Tin nhắn">
-                <MessageCircle className="h-4 w-4" />
-                {unreadMsgs > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
-                    {unreadMsgs > 9 ? '9+' : unreadMsgs}
-                  </span>
-                )}
-              </Link>
-            </Button>
+            <MessageDropdown />
             <NotificationDropdown />
-            <Button variant="ghost" size="icon" className="hidden h-9 w-9 rounded-lg md:inline-flex" asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" asChild>
               <Link to="/favorites" title="Phòng yêu thích">
                 <Heart className="h-4 w-4" />
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" className="hidden h-9 items-center gap-2 rounded-lg border px-2 md:inline-flex" asChild>
-              <Link to="/profile">
-                {user?.avatar ? (
-                  <img src={user.avatar} className="h-6 w-6 rounded-full object-cover" alt="" />
-                ) : (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {(user?.name || 'U')[0].toUpperCase()}
-                  </span>
-                )}
-                <span className="max-w-24 truncate text-xs font-medium">{user?.name?.split(' ').pop() || 'Tôi'}</span>
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden h-9 w-9 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:inline-flex"
-              onClick={handleLogout}
-              title="Đăng xuất"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <UserDropdown user={user} handleLogout={handleLogout} unreadMsgs={unreadMsgs} />
           </>
         ) : (
           <div className="hidden items-center gap-2 md:flex">

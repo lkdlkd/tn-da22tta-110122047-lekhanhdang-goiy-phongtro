@@ -38,9 +38,19 @@ export function FavoriteButton({ roomId, initialFavorited = false, size = 'md', 
         await addFavoriteApi(roomId)
         toast.success('Đã lưu phòng yêu thích ❤️')
       }
-    } catch {
-      setFavorited(prev) // rollback
-      toast.error('Có lỗi xảy ra, vui lòng thử lại')
+    } catch (err) {
+      const status = err.response?.status
+      // Self-healing: if we try to add but it's already favorited (409), or remove but it's already removed (404)
+      if (!prev && status === 409) {
+        // Keep as favorited
+        toast.success('Đã lưu phòng yêu thích ❤️')
+      } else if (prev && status === 404) {
+        // Keep as not favorited
+        toast.success('Đã bỏ yêu thích')
+      } else {
+        setFavorited(prev) // rollback
+        toast.error('Có lỗi xảy ra, vui lòng thử lại')
+      }
     } finally {
       setLoading(false)
     }

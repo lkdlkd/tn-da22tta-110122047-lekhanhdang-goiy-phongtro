@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Flag, Home, LayoutDashboard, MessageSquare, Shield, Users } from 'lucide-react'
+import { Calendar, Flag, Home, LayoutDashboard, MessageSquare, Shield, Users, Bell } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
@@ -7,8 +7,10 @@ const NAV_ITEMS = [
   { to: '/admin', label: 'Tổng quan', icon: LayoutDashboard, end: true },
   { to: '/admin/rooms', label: 'Phòng trọ', icon: Home },
   { to: '/admin/users', label: 'Người dùng', icon: Users },
+  { to: '/admin/appointments', label: 'Lịch hẹn', icon: Calendar },
   { to: '/admin/comments', label: 'Bình luận', icon: MessageSquare },
   { to: '/admin/reports', label: 'Báo cáo', icon: Flag },
+  { to: '/admin/notifications', label: 'Thông báo', icon: Bell },
 ]
 
 function SidebarLink({ to, label, icon: Icon, end }) {

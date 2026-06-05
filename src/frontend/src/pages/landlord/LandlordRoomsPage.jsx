@@ -10,10 +10,12 @@ import {
   LayoutGrid,
   LayoutList,
   MapPin,
+  Maximize2,
   Pencil,
   Plus,
   Search,
   Trash2,
+  Users,
 } from 'lucide-react'
 import { deleteRoomApi, getMyRoomsApi } from '@/services/roomService'
 import { Button } from '@/components/ui/button'
@@ -62,10 +64,15 @@ function formatAddress(address) {
 }
 
 function RoomImage({ room, className }) {
+  const image = room.images?.[0]
   return (
-    <div className={cn('relative overflow-hidden bg-muted', className)}>
-      {room.images?.[0] ? (
-        <img src={room.images[0]} alt={room.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+    <div className={cn('relative overflow-hidden bg-muted h-full w-full', className)}>
+      {image ? (
+        <img
+          src={image}
+          alt={room.title}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
           <Home className="h-8 w-8" />
@@ -109,63 +116,60 @@ function RoomGridCard({ room, onDelete, deletingId }) {
   const unavailable = !room.isAvailable
 
   return (
-    <Card className={cn('group overflow-hidden transition-colors hover:border-primary/40', room.status === 'rejected' && 'border-red-200')}>
-      <RoomImage room={room} className="aspect-[4/3]" />
-      <CardContent className="space-y-4 p-4">
-        <div className="flex flex-wrap gap-2">
-          <StatusBadge status={room.status || 'pending'} type="approval" compact />
-          <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
-        </div>
-
-        <div className="min-w-0 space-y-1">
-          <h2 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5">{room.title}</h2>
-          {address && (
-            <p className="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span className="line-clamp-2">{address}</span>
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/30 p-2 text-center">
-          <div>
-            <p className="text-[10px] text-muted-foreground">Giá</p>
-            <p className="mt-1 truncate text-xs font-bold text-primary">{formatCurrency(room.price)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground">Diện tích</p>
-            <p className="mt-1 text-xs font-semibold">{room.area || 0} m²</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground">Sức chứa</p>
-            <p className="mt-1 text-xs font-semibold">{room.capacity || 1} người</p>
+    <Card className={cn('group overflow-hidden rounded-lg border transition-colors hover:border-primary/40 hover:shadow-sm', room.status === 'rejected' && 'border-red-200')}>
+      <CardContent className="flex h-full flex-col p-0">
+        <div className="relative overflow-hidden bg-muted aspect-[4/3]">
+          <RoomImage room={room} className="h-full w-full" />
+          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1.5">
+            <StatusBadge status={room.status || 'pending'} type="approval" compact />
+            <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
           </div>
         </div>
 
-        {(room.status === 'flagged' || room.status === 'rejected' || unavailable) && (
-          <div className={cn(
-            'flex gap-2 rounded-lg border px-3 py-2 text-xs leading-5',
-            room.status === 'flagged' || room.status === 'rejected'
-              ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
-              : 'border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
-          )}>
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              {room.status === 'flagged' && 'Tin đang bị ẩn do vi phạm. Vui lòng kiểm tra và chỉnh sửa.'}
-              {room.status === 'rejected' && 'Tin đã bị từ chối. Hãy cập nhật nội dung trước khi đăng lại.'}
-              {room.status !== 'flagged' && room.status !== 'rejected' && unavailable && 'Phòng đã cho thuê, sinh viên sẽ thấy trạng thái này khi xem tin.'}
-            </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+          <div className="min-w-0">
+            <Link to={`/rooms/${room.slug}`} className="line-clamp-2 text-sm font-semibold leading-5 hover:text-primary transition-colors">
+              {room.title}
+            </Link>
+            {address && (
+              <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="line-clamp-2">{address}</span>
+              </p>
+            )}
           </div>
-        )}
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="text-base font-bold text-primary">{formatCurrency(room.price)}</span>
+            {room.area ? <span className="inline-flex items-center gap-1"><Maximize2 className="h-3.5 w-3.5" />{room.area} m²</span> : null}
+            {room.capacity ? <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{room.capacity} người</span> : null}
+          </div>
+
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Eye className="h-3.5 w-3.5" />
-            {(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem
-          </span>
-        </div>
+            <span>{(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem</span>
+          </div>
 
-        <RoomActions room={room} onDelete={onDelete} deletingId={deletingId} />
+          {(room.status === 'flagged' || room.status === 'rejected' || unavailable) && (
+            <div className={cn(
+              'flex gap-2 rounded-lg border px-3 py-2 text-xs leading-5',
+              room.status === 'flagged' || room.status === 'rejected'
+                ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+                : 'border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+            )}>
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="leading-snug">
+                {room.status === 'flagged' && 'Tin bị ẩn do vi phạm. Cần chỉnh sửa.'}
+                {room.status === 'rejected' && 'Tin bị từ chối. Cần cập nhật.'}
+                {room.status !== 'flagged' && room.status !== 'rejected' && unavailable && 'Phòng đã cho thuê (tạm ẩn).'}
+              </span>
+            </div>
+          )}
+
+          <div className="mt-auto pt-1">
+            <RoomActions room={room} onDelete={onDelete} deletingId={deletingId} />
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -173,35 +177,63 @@ function RoomGridCard({ room, onDelete, deletingId }) {
 
 function RoomListItem({ room, onDelete, deletingId }) {
   const address = formatAddress(room.address)
+  const unavailable = !room.isAvailable
 
   return (
-    <Card className="group overflow-hidden transition-colors hover:border-primary/40">
-      <CardContent className="grid gap-0 p-0 sm:grid-cols-[220px_1fr]">
-        <RoomImage room={room} className="aspect-[16/9] sm:aspect-auto" />
-        <div className="min-w-0 space-y-4 p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge status={room.status || 'pending'} type="approval" compact />
-                <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
-              </div>
-              <h2 className="line-clamp-1 pt-1 font-semibold">{room.title}</h2>
+    <Card className="group overflow-hidden rounded-lg border transition-colors hover:border-primary/40 hover:shadow-sm">
+      <CardContent className="flex h-full flex-col p-0 sm:grid sm:grid-cols-[220px_1fr]">
+        <div className="relative overflow-hidden bg-muted aspect-[16/10] sm:aspect-auto">
+          <RoomImage room={room} className="h-full w-full" />
+          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1.5">
+            <StatusBadge status={room.status || 'pending'} type="approval" compact />
+            <StatusBadge status={room.isAvailable ? 'available' : 'rented'} type="availability" compact />
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4">
+          <div className="space-y-3">
+            <div className="min-w-0">
+              <Link to={`/rooms/${room.slug}`} className="line-clamp-2 text-sm font-semibold leading-5 hover:text-primary transition-colors">
+                {room.title}
+              </Link>
               {address && (
-                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="line-clamp-1">{address}</span>
+                <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="line-clamp-2">{address}</span>
                 </p>
               )}
             </div>
-            <div className="text-left md:text-right">
-              <p className="font-bold text-primary">{formatCurrency(room.price)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{room.area || 0} m² · {room.capacity || 1} người</p>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="text-base font-bold text-primary">{formatCurrency(room.price)}</span>
+              {room.area ? <span className="inline-flex items-center gap-1"><Maximize2 className="h-3.5 w-3.5" />{room.area} m²</span> : null}
+              {room.capacity ? <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{room.capacity} người</span> : null}
+              <span className="h-3 w-px bg-slate-200 dark:bg-slate-700" />
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                {(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem
+              </span>
             </div>
+
+            {(room.status === 'flagged' || room.status === 'rejected' || unavailable) && (
+              <div className={cn(
+                'flex gap-2 rounded-lg border px-3 py-2 text-xs leading-5 w-fit',
+                room.status === 'flagged' || room.status === 'rejected'
+                  ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+              )}>
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="leading-snug">
+                  {room.status === 'flagged' && 'Tin bị ẩn do vi phạm. Cần chỉnh sửa.'}
+                  {room.status === 'rejected' && 'Tin bị từ chối. Cần cập nhật.'}
+                  {room.status !== 'flagged' && room.status !== 'rejected' && unavailable && 'Phòng đã cho thuê (tạm ẩn).'}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-xs text-muted-foreground">{(room.viewCount || 0).toLocaleString('vi-VN')} lượt xem</span>
-            <div className="sm:w-[260px]">
+          <div className="flex items-center justify-end border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-auto">
+            <div className="w-full sm:w-[260px]">
               <RoomActions room={room} onDelete={onDelete} deletingId={deletingId} />
             </div>
           </div>
@@ -352,19 +384,45 @@ export default function LandlordRoomsPage() {
         )}
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {[0, 1, 2].map((item) => (
-              <Card key={item} className="overflow-hidden">
-                <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                <CardContent className="space-y-3 p-4">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          viewMode === 'grid' ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[0, 1, 2].map((item) => (
+                <Card key={item} className="overflow-hidden rounded-lg border">
+                  <CardContent className="flex h-full flex-col p-0">
+                    <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                    <div className="flex-1 space-y-3 p-4">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-24" />
+                      <div className="pt-2">
+                        <Skeleton className="h-8 w-full rounded-lg" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[0, 1, 2].map((item) => (
+                <Card key={item} className="overflow-hidden rounded-lg border">
+                  <CardContent className="flex h-full flex-col p-0 sm:grid sm:grid-cols-[220px_1fr]">
+                    <Skeleton className="aspect-[16/10] sm:aspect-auto sm:h-full rounded-none" />
+                    <div className="flex-1 flex flex-col justify-between gap-3 p-4">
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <div className="flex items-center justify-end border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-auto">
+                        <Skeleton className="h-8 w-[260px] rounded-lg" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         ) : filteredRooms.length === 0 ? (
           <LandlordEmptyState
             icon={rooms.length ? Search : Home}

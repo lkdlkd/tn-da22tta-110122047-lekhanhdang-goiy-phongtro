@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { getRoomsApi } from '@/services/roomService'
 import { RoomCard, RoomCardSkeleton } from '@/components/rooms/RoomCard'
+import { getFavoriteIdsApi } from '@/services/favoriteService'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import heroImage from '@/assets/home-hero-student-housing.jpg'
@@ -78,17 +79,17 @@ function CategoryGrid() {
   return (
     <section className="border-b bg-background">
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-3 md:grid-cols-6 sm:gap-3">
           {CATEGORY_LINKS.map(({ icon: Icon, label, href }) => (
             <Link
               key={href}
               to={href}
-              className="group flex min-h-24 flex-col justify-between rounded-lg border bg-card p-3 transition-colors hover:border-primary/50 hover:bg-primary/5 sm:p-4"
+              className="group flex flex-col items-center gap-2 rounded-lg border bg-card p-3 text-center transition-colors hover:border-primary/50 hover:bg-primary/5 sm:flex-row sm:gap-3 sm:p-4 sm:text-left"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <Icon className="h-5 w-5" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground sm:h-10 sm:w-10">
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </span>
-              <span className="mt-3 text-sm font-semibold leading-tight">{label}</span>
+              <span className="text-[11px] font-semibold leading-tight sm:text-sm">{label}</span>
             </Link>
           ))}
         </div>
@@ -109,13 +110,19 @@ function FeatureCard({ icon: Icon, title, desc }) {
   )
 }
 
-function RoomGrid({ loading, rooms, emptyText }) {
+function RoomGrid({ loading, rooms, emptyText, favoriteIds = [] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
       {loading
         ? Array.from({ length: 6 }).map((_, index) => <RoomCardSkeleton key={index} />)
         : rooms.length > 0
-          ? rooms.map((room) => <RoomCard key={room._id} room={room} />)
+          ? rooms.map((room) => (
+              <RoomCard
+                key={room._id}
+                room={room}
+                initialFavorited={favoriteIds.includes(String(room._id))}
+              />
+            ))
           : <p className="col-span-full rounded-lg border bg-card py-12 text-center text-sm text-muted-foreground">{emptyText}</p>}
     </div>
   )
@@ -130,6 +137,7 @@ export default function HomePage() {
   const [recent, setRecent] = useState([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
+  const [favoriteIds, setFavoriteIds] = useState([])
 
   useEffect(() => {
     getRoomsApi({ sort: 'views', limit: 6, status: 'approved' })
@@ -142,6 +150,16 @@ export default function HomePage() {
       .catch(() => setRecent([]))
       .finally(() => setLoadingRecent(false))
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setFavoriteIds([])
+      return
+    }
+    getFavoriteIdsApi()
+      .then((res) => setFavoriteIds(res.data?.data?.roomIds || []))
+      .catch(() => {})
+  }, [user, featured, recent])
 
   const handleSearch = (event) => {
     event.preventDefault()
@@ -159,20 +177,20 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-black/55" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[500px] max-w-7xl flex-col justify-center px-4 py-12 text-white sm:px-6 lg:min-h-[620px] lg:px-8">
+        <div className="relative mx-auto flex min-h-[480px] max-w-7xl flex-col justify-center px-4 py-12 text-white sm:min-h-[540px] sm:px-6 lg:min-h-[600px] lg:px-8">
           <div className="max-w-2xl">
             <Badge className="mb-4 border-white/25 bg-white/15 text-white hover:bg-white/15">
               <MapPin className="h-3.5 w-3.5" />
               Vĩnh Long · Phòng trọ sinh viên
             </Badge>
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               Tìm phòng trọ phù hợp, xem thông tin rõ ràng
             </h1>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-white/85 sm:text-base">
+            <p className="mt-4 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
               Khám phá phòng trọ, chung cư mini và ký túc xá quanh Vĩnh Long. So sánh giá, tiện ích, vị trí và liên hệ chủ trọ nhanh hơn.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" asChild className="rounded-lg">
+            <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+              <Button size="lg" asChild className="h-11 rounded-lg sm:h-12">
                 <Link to="/search">
                   Khám phá phòng
                   <ArrowRight className="h-4 w-4" />
@@ -182,7 +200,7 @@ export default function HomePage() {
                 size="lg"
                 variant="secondary"
                 asChild
-                className="rounded-lg bg-white text-slate-950 hover:bg-white/90 hover:text-slate-950 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90 dark:hover:text-slate-950"
+                className="h-11 rounded-lg bg-white text-slate-950 hover:bg-white/90 hover:text-slate-950 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90 dark:hover:text-slate-950 sm:h-12"
               >
                 <Link to={user ? '/recommend' : '/login'}>
                   Gợi ý cho bạn
@@ -236,7 +254,7 @@ export default function HomePage() {
             desc="Các tin được quan tâm nhiều, phù hợp để bạn bắt đầu so sánh nhanh."
             href="/search?sort=views"
           />
-          <RoomGrid loading={loadingFeatured} rooms={featured} emptyText="Chưa có phòng nổi bật." />
+          <RoomGrid loading={loadingFeatured} rooms={featured} emptyText="Chưa có phòng nổi bật." favoriteIds={favoriteIds} />
         </section>
 
         <section className="rounded-xl border bg-muted/25 px-4 py-8 sm:px-6 lg:px-8">
@@ -259,7 +277,7 @@ export default function HomePage() {
             desc="Cập nhật các phòng mới để bạn không bỏ lỡ lựa chọn phù hợp."
             href="/search?sort=newest"
           />
-          <RoomGrid loading={loadingRecent} rooms={recent} emptyText="Chưa có phòng mới." />
+          <RoomGrid loading={loadingRecent} rooms={recent} emptyText="Chưa có phòng mới." favoriteIds={favoriteIds} />
         </section>
       </main>
 

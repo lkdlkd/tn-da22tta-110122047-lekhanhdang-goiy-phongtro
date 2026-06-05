@@ -34,7 +34,11 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      const path = window.location.pathname
+      const isAuthPath = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'].some(p => path.startsWith(p))
+      if (!isAuthPath) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

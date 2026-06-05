@@ -35,68 +35,69 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-muted/20">
+      {/* Header section */}
       <section className="border-b bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-red-50 text-red-600 dark:bg-red-950/40">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card text-red-500 shadow-sm">
                 <Heart className="h-5 w-5 fill-current" />
-              </div>
+              </span>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Phòng yêu thích</h1>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Lưu lại các phòng bạn quan tâm để so sánh và quay lại xem nhanh hơn.
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Lưu lại các phòng bạn quan tâm để dễ dàng theo dõi và so sánh nhanh.
                 </p>
               </div>
             </div>
 
-            {rooms.length > 0 && (
-              <Button asChild variant="outline" className="h-9 rounded-lg">
-                <Link to="/search">
-                  <Search className="h-4 w-4" />
-                  Tìm thêm
-                </Link>
-              </Button>
-            )}
-          </div>
-
-          {!loading && (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="h-8 rounded-lg px-3">
-                {rooms.length > 0 ? `${rooms.length} phòng đã lưu` : 'Chưa có phòng nào'}
-              </Badge>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {!loading && (
+                <Badge variant="outline" className="h-9 rounded-xl px-3.5 text-xs font-semibold bg-muted/30">
+                  {rooms.length > 0 ? `${rooms.length} phòng đã lưu` : 'Trống'}
+                </Badge>
+              )}
+              {rooms.length > 0 && (
+                <Button asChild variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs h-9">
+                  <Link to="/search">
+                    <Search className="h-3.5 w-3.5" /> Tìm thêm phòng trọ
+                  </Link>
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+      {/* Main Grid section */}
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => <RoomCardSkeleton key={index} />)}
           </div>
         ) : rooms.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-400 dark:bg-red-950/40">
-                <HeartOff className="h-7 w-7" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Chưa có phòng yêu thích</h2>
-                <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
-                  Khi thấy phòng phù hợp, nhấn biểu tượng trái tim để lưu vào danh sách này.
-                </p>
-              </div>
-              <Button asChild className="rounded-lg">
-                <Link to="/search">
-                  <Search className="h-4 w-4" />
-                  Khám phá phòng ngay
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="max-w-md mx-auto my-8">
+            <Card className="border-dashed border-2 bg-card/50">
+              <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border bg-muted/40 text-red-400">
+                  <HeartOff className="h-6 w-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-base font-bold tracking-tight">Chưa lưu phòng trọ yêu thích</h2>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Hãy duyệt qua các tin phòng trọ quanh trường và nhấn nút trái tim để lưu lại các tin đăng bạn thấy ưng ý nhất.
+                  </p>
+                </div>
+                <Button asChild className="rounded-xl h-9 text-xs gap-1.5 px-5 mt-2">
+                  <Link to="/search">
+                    <Search className="h-3.5 w-3.5" /> Khám phá phòng ngay
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {rooms.map((room) => (
               <RoomCard
                 key={room._id}
@@ -111,10 +112,10 @@ export default function FavoritesPage() {
                       handleRemove(room._id)
                     }}
                     disabled={removing === room._id}
-                    title="Bỏ yêu thích"
-                    className="flex h-9 w-9 items-center justify-center rounded-md border border-red-200 bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-600 hover:text-white disabled:opacity-50 dark:bg-zinc-900/95"
+                    title="Xoá khỏi yêu thích"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-red-100 bg-background/90 backdrop-blur-sm text-red-500 shadow-sm transition-all hover:scale-110 active:scale-95 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-red-950/30 dark:hover:bg-red-950/20"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
               />

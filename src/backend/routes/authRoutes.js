@@ -13,6 +13,7 @@ const {
   googleRedirect,
   googleCallback,
   googleLoginApi,
+  resendVerification,
 } = require('../controllers/authController')
 
 // Public routes
@@ -24,6 +25,7 @@ router.get('/verify-email/:token', verifyEmail)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
 router.post('/google', googleLoginApi)
+router.post('/resend-verification', resendVerification)
 
 // Google OAuth2 — backend redirect flow
 router.get('/google', googleRedirect)

@@ -68,6 +68,7 @@ export function RoomCard({
   showFavorite = true,
   showCompare = true,
   showViewButton = true,
+  initialFavorited = false,
   actionSlot,
   amenitiesMap,
   className,
@@ -111,55 +112,55 @@ export function RoomCard({
           {showActions && (
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
               {showCompare && <CompareButton room={room} size="icon" />}
-              {showFavorite && <FavoriteButton roomId={room._id} size="icon" />}
+              {showFavorite && <FavoriteButton roomId={room._id} size="icon" initialFavorited={initialFavorited} />}
               {actionSlot}
             </div>
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
           <div className="min-w-0">
-            <Link to={`/rooms/${room.slug}`} className="line-clamp-2 text-sm font-semibold leading-5 hover:text-primary">
+            <Link to={`/rooms/${room.slug}`} className="line-clamp-2 text-xs sm:text-sm font-semibold leading-5 hover:text-primary">
               {room.title}
             </Link>
             {address && (
-              <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p className="mt-1 flex items-start gap-1 text-[10px] sm:text-xs leading-4 text-muted-foreground">
+                <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
                 <span className="line-clamp-2">{address}</span>
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span className="text-base font-bold text-primary">{formatRoomPrice(room.price)}</span>
-            {room.area ? <span className="inline-flex items-center gap-1"><Maximize2 className="h-3.5 w-3.5" />{room.area} m²</span> : null}
-            {room.capacity ? <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{room.capacity} người</span> : null}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] sm:text-xs text-muted-foreground">
+            <span className="text-sm sm:text-base font-bold text-primary">{formatRoomPrice(room.price)}</span>
+            {room.area ? <span className="inline-flex items-center gap-0.5"><Maximize2 className="h-3 w-3" />{room.area} m²</span> : null}
+            {room.capacity ? <span className="inline-flex items-center gap-0.5"><Users className="h-3 w-3" />{room.capacity} người</span> : null}
           </div>
 
           {distanceText && (
-            <div className="inline-flex w-fit items-center gap-1.5 rounded-lg border bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary">
-              <MapPin className="h-3.5 w-3.5" />
+            <div className="inline-flex w-fit items-center gap-1 rounded-lg border bg-primary/5 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-primary">
+              <MapPin className="h-3 w-3" />
               Cách bạn {distanceText}
             </div>
           )}
 
           {room.amenities?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {room.amenities.slice(0, amenityLimit).map((amenity) => (
-                <span key={amenity} className="rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+            <div className="flex flex-wrap gap-1">
+              {room.amenities.slice(0, list ? 6 : 2).map((amenity) => (
+                <span key={amenity} className="rounded bg-gray-200 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-muted-foreground">
                   {amenitiesMap?.[amenity] || String(amenity).replace(/_/g, ' ')}
                 </span>
               ))}
-              {room.amenities.length > amenityLimit && (
-                <span className="px-1 py-1 text-[10px] text-muted-foreground">+{room.amenities.length - amenityLimit}</span>
+              {room.amenities.length > (list ? 6 : 2) && (
+                <span className="px-1 py-0.5 text-[9px] sm:text-[10px] text-muted-foreground">+{room.amenities.length - (list ? 6 : 2)}</span>
               )}
             </div>
           )}
 
           {showViewButton && (
-            <Button asChild size="sm" variant="outline" className="mt-auto h-8 rounded-lg">
+            <Button asChild size="sm" variant="default" className="mt-auto h-7 sm:h-8 rounded-lg text-xs hidden sm:flex">
               <Link to={`/rooms/${room.slug}`}>
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
                 Xem chi tiết
               </Link>
             </Button>

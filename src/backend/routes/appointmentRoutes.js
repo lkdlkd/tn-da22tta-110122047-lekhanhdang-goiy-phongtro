@@ -10,8 +10,8 @@ const router = express.Router()
 router.use(authenticate)
 router.post('/', createAppointment)
 router.get('/', getAppointments)
-router.put('/:id/confirm', authorize('landlord', 'admin'), confirmAppointment)
+router.put('/:id/confirm', authorize('student', 'landlord', 'admin'), confirmAppointment)
 router.put('/:id/cancel', cancelAppointment)
-router.put('/:id/complete', authorize('landlord', 'admin'), completeAppointment)
+router.put('/:id/complete', authorize('student', 'landlord', 'admin'), completeAppointment)
 
 module.exports = router

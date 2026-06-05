@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-5">
             {!token && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm leading-6 text-destructive">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm leading-6 text-destructive">
                 Không tìm thấy mã đặt lại mật khẩu trong liên kết. Vui lòng yêu cầu gửi email khôi phục mới.
               </div>
             )}
@@ -97,7 +97,7 @@ export default function ResetPasswordPage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
-                className="h-11 rounded-lg"
+                className="h-11 rounded-xl"
                 {...register('confirmPassword')}
               />
             </FormField>
@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
             >
               Đặt lại mật khẩu
             </SubmitButton>
-            <Button variant="ghost" asChild className="h-11 w-full rounded-lg">
+            <Button variant="ghost" asChild className="h-11 w-full rounded-xl">
               <Link to="/login">
                 <ArrowLeft className="h-4 w-4" />
                 Quay lại đăng nhập

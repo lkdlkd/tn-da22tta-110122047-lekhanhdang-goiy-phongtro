@@ -6,7 +6,7 @@ const interactionSchema = new mongoose.Schema(
     room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
     type: {
       type: String,
-      enum: ['view', 'save'],
+      enum: ['view', 'save', 'chat', 'booking'],
       required: true,
     },
   },

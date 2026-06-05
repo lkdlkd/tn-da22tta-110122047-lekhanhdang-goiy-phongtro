@@ -28,6 +28,8 @@ import { LocationPickerDialog } from '@/components/common/LocationPickerDialog'
 import { RoomFinderWizard } from '@/components/rooms/RoomFinderWizard'
 import { RoomCard, RoomCardSkeleton, formatRoomAddress } from '@/components/rooms/RoomCard'
 import { searchRoomsApi } from '@/services/roomService'
+import { useSelector } from 'react-redux'
+import { getFavoriteIdsApi } from '@/services/favoriteService'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -328,6 +330,19 @@ export default function SearchPage() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const cardRefs = useRef({})
 
+  const user = useSelector((state) => state.auth?.user)
+  const [favoriteIds, setFavoriteIds] = useState([])
+
+  useEffect(() => {
+    if (!user) {
+      setFavoriteIds([])
+      return
+    }
+    getFavoriteIdsApi()
+      .then((res) => setFavoriteIds(res.data?.data?.roomIds || []))
+      .catch(() => { })
+  }, [user, rooms])
+
   const filters = useMemo(() => ({
     q: searchParams.get('q') || '',
     roomType: searchParams.get('roomType') || '',
@@ -568,12 +583,12 @@ export default function SearchPage() {
               <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                 {viewMode === 'grid' ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
               </Button>
-              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs" onClick={() => setWizardOpen(true)}><Sparkles className="h-3.5 w-3.5" />AI</Button>
+              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs" onClick={() => setWizardOpen(true)}><Sparkles className="h-3.5 w-3.5" />Gợi ý</Button>
               <Button variant={showMap ? 'default' : 'outline'} size="sm" className="h-9 rounded-lg text-xs" onClick={() => setShowMap((value) => !value)}><MapIcon className="h-3.5 w-3.5" />Bản đồ</Button>
             </div>
 
             {loading ? (
-              <div className={cn('grid gap-4', viewMode === 'list' || showMap ? 'grid-cols-1' : 'sm:grid-cols-2 xl:grid-cols-3')}>
+              <div className={cn('grid', viewMode === 'list' || showMap ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3')}>
                 {Array.from({ length: 6 }).map((_, index) => <RoomCardSkeleton key={index} view={viewMode === 'list' || showMap ? 'list' : 'grid'} />)}
               </div>
             ) : rooms.length === 0 ? (
@@ -594,7 +609,7 @@ export default function SearchPage() {
               </Card>
             ) : (
               <>
-                <div className={cn('grid gap-4', viewMode === 'list' || showMap ? 'grid-cols-1' : 'sm:grid-cols-2 xl:grid-cols-3')}>
+                <div className={cn('grid', viewMode === 'list' || showMap ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3')}>
                   {rooms.map((room) => (
                     <div key={room._id} ref={(element) => { cardRefs.current[room._id] = element }}>
                       <RoomCard
@@ -602,6 +617,7 @@ export default function SearchPage() {
                         view={viewMode === 'list' || showMap ? 'list' : 'grid'}
                         highlighted={highlightedId === room._id}
                         distanceText={calcDistance(userLocation, room.location?.coordinates)}
+                        initialFavorited={favoriteIds.includes(String(room._id))}
                         amenitiesMap={Object.fromEntries(AMENITIES.map((item) => [item.value, item.label]))}
                       />
                     </div>
