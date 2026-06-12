@@ -386,7 +386,7 @@ export default function SearchPage() {
     return count
   }, [filters])
 
-  const isDefaultState = filters.q === '' && activeCount === 0 && page === 1 && filters.sort === 'newest'
+  const isDefaultState = filters.q === '' && activeCount === 0 && page === 1 && !searchParams.has('sort')
   const currentRooms = isDefaultState ? recs : rooms
   const currentLoading = isDefaultState ? loadingRecs : loading
 
@@ -409,11 +409,6 @@ export default function SearchPage() {
   }, [filters, page, userLocation])
 
   useEffect(() => {
-    if (isDefaultState) {
-      setRooms([])
-      setLoading(false)
-      return
-    }
     let ignore = false
     const fetchRooms = async () => {
       try {
@@ -432,7 +427,7 @@ export default function SearchPage() {
     return () => {
       ignore = true
     }
-  }, [searchParams, page, userLocation, buildParams, isDefaultState])
+  }, [searchParams, page, userLocation, buildParams])
 
   useEffect(() => {
     if (!showMap) return
@@ -575,10 +570,10 @@ export default function SearchPage() {
 
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 px-4 pb-3 sm:px-6 lg:px-8">
           <span className={cn('text-sm font-semibold', currentLoading ? 'text-muted-foreground' : 'text-foreground')}>
-            {currentLoading 
-              ? 'Đang tìm...' 
-              : isDefaultState 
-                ? (user ? 'Gợi ý dành riêng cho bạn' : 'Gợi ý nổi bật từ cộng đồng') 
+            {currentLoading
+              ? 'Đang tìm...'
+              : isDefaultState
+                ? (user ? 'Gợi ý dành riêng cho bạn' : 'Gợi ý nổi bật từ cộng đồng')
                 : `${pagination.total} phòng phù hợp`}
           </span>
           {tags.map((tag, index) => (
@@ -673,9 +668,7 @@ export default function SearchPage() {
                     </div>
                   ))}
                 </div>
-                {!isDefaultState && (
-                  <Pagination page={page} total={pagination.total} totalPages={pagination.totalPages} onChange={handlePage} />
-                )}
+                <Pagination page={page} total={pagination.total} totalPages={pagination.totalPages} onChange={handlePage} />
               </>
             )}
           </main>
