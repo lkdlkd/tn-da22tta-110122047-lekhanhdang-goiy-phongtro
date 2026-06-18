@@ -25,7 +25,6 @@ import {
   Flame,
 } from 'lucide-react'
 import { LocationPickerDialog } from '@/components/common/LocationPickerDialog'
-import { RoomFinderWizard } from '@/components/rooms/RoomFinderWizard'
 import { RoomCard, RoomCardSkeleton, formatRoomAddress } from '@/components/rooms/RoomCard'
 import { searchRoomsApi } from '@/services/roomService'
 import { getCommunityRecommendApi, forYouApi } from '@/services/recommendService'
@@ -37,6 +36,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Sheet } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
 
@@ -321,7 +321,6 @@ export default function SearchPage() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const [wizardOpen, setWizardOpen] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
   const [userLocation, setUserLocation] = useState(null)
   const [highlightedId, setHighlightedId] = useState(null)
@@ -386,7 +385,7 @@ export default function SearchPage() {
     return count
   }, [filters])
 
-  const isDefaultState = filters.q === '' && activeCount === 0 && page === 1 && !searchParams.has('sort')
+  const isDefaultState = filters.q === '' && activeCount === 0 && !searchParams.has('page') && !searchParams.has('sort')
   const currentRooms = isDefaultState ? recs : rooms
   const currentLoading = isDefaultState ? loadingRecs : loading
 
@@ -488,7 +487,6 @@ export default function SearchPage() {
 
   const handleMarker = (id) => {
     setHighlightedId(id)
-    cardRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }
 
   const roomPositions = useMemo(() => {
@@ -555,9 +553,6 @@ export default function SearchPage() {
             <select value={filters.sort} onChange={(event) => handleChange('sort', event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none">
               {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg text-primary" onClick={() => setWizardOpen(true)} title="Gợi ý tìm phòng">
-              <Sparkles className="h-4 w-4" />
-            </Button>
             <div className="grid grid-cols-2 rounded-lg border bg-card p-1">
               <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-md" onClick={() => setViewMode('grid')}><LayoutGrid className="h-4 w-4" /></Button>
               <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-md" onClick={() => setViewMode('list')}><LayoutList className="h-4 w-4" /></Button>
@@ -606,7 +601,6 @@ export default function SearchPage() {
               <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                 {viewMode === 'grid' ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
               </Button>
-              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs" onClick={() => setWizardOpen(true)}><Sparkles className="h-3.5 w-3.5" />Gợi ý</Button>
               <Button variant={showMap ? 'default' : 'outline'} size="sm" className="h-9 rounded-lg text-xs" onClick={() => setShowMap((value) => !value)}><MapIcon className="h-3.5 w-3.5" />Bản đồ</Button>
             </div>
 
@@ -672,19 +666,33 @@ export default function SearchPage() {
               </>
             )}
           </main>
+        </div>
+      </div>
 
-          {showMap && (
-            <aside className="hidden w-[400px] shrink-0 overflow-hidden rounded-lg border bg-card md:block xl:w-[460px]" style={{ height: 'calc(100svh - 132px)' }}>
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  {mapLoading ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <MapIcon className="h-4 w-4 text-primary" />}
-                  {roomPositions.length} phòng trên bản đồ
+      <Dialog open={showMap} onOpenChange={setShowMap}>
+        <DialogContent className="max-w-5xl h-[85vh] p-0 flex flex-col gap-0 overflow-hidden rounded-xl">
+          <DialogHeader className="px-4 py-3 border-b shrink-0 flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              {mapLoading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                <MapIcon className="h-4.5 w-4.5 text-primary" />
+              )}
+              Bản đồ phòng trọ ({roomPositions.length} phòng)
+            </DialogTitle>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mr-6">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#14b8a6]" /> Phòng trọ
+              </span>
+              {userLocation && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Vị trí của bạn
                 </span>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Phòng</span>
-                  {userLocation && <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />Bạn</span>}
-                </div>
-              </div>
+              )}
+            </div>
+          </DialogHeader>
+          <div className="flex-1 relative w-full h-full min-h-[300px]">
+            {showMap && (
               <MapContainer center={mapCenter} zoom={13} className="h-full w-full" key={mapCenter.join(',')}>
                 <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 {userLocation && (
@@ -708,38 +716,10 @@ export default function SearchPage() {
                   </CircleMarker>
                 ))}
               </MapContainer>
-            </aside>
-          )}
-        </div>
-      </div>
-
-      {showMap && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col bg-background md:hidden">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <p className="font-semibold">{roomPositions.length} phòng trên bản đồ</p>
-            <Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setShowMap(false)}><X className="h-4 w-4" />Đóng</Button>
+            )}
           </div>
-          <MapContainer center={mapCenter} zoom={13} className="flex-1" key={`mobile-${mapCenter.join(',')}`}>
-            <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {userLocation && <CircleMarker center={[userLocation.lat, userLocation.lng]} radius={9} pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.95, weight: 2 }} />}
-            {roomPositions.map((position) => (
-              <CircleMarker key={position.id} center={[position.lat, position.lng]} radius={highlightedId === position.id ? 12 : 8} pathOptions={{ color: highlightedId === position.id ? '#0369a1' : '#0f766e', fillColor: highlightedId === position.id ? '#0ea5e9' : '#14b8a6', fillOpacity: 0.95, weight: 3 }} eventHandlers={{ click: () => handleMarker(position.id) }}>
-                <Tooltip permanent direction="top" offset={[0, -8]} opacity={1}>
-                  <span className="text-[11px] font-bold text-primary">{formatShort(position.price)}</span>
-                </Tooltip>
-                <Popup minWidth={220}>
-                  <div className="w-56 space-y-2">
-                    {position.image && <img src={position.image} alt="" className="h-24 w-full rounded-md object-cover" />}
-                    <Link to={`/rooms/${position.slug}`} className="line-clamp-2 text-sm font-semibold hover:text-primary">{position.title}</Link>
-                    {position.address && <p className="line-clamp-2 text-xs text-muted-foreground">{position.address}</p>}
-                    <p className="text-sm font-bold text-primary">{formatMoney(position.price)}/tháng</p>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
-          </MapContainer>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={mobileFilterOpen} onClose={() => setMobileFilterOpen(false)} title="Bộ lọc tìm kiếm">
         <FilterPanel filters={filters} onChange={handleChange} onReset={handleReset} activeCount={activeCount} compact userLocation={userLocation} onRequestLocation={() => setLocationPickerOpen(true)} />
@@ -747,8 +727,6 @@ export default function SearchPage() {
           Xem {pagination.total > 0 ? `${pagination.total} phòng` : 'kết quả'}
         </Button>
       </Sheet>
-
-      <RoomFinderWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
       <LocationPickerDialog open={locationPickerOpen} onClose={() => setLocationPickerOpen(false)} onSelect={(coords) => setUserLocation(coords)} />
     </div>
   )

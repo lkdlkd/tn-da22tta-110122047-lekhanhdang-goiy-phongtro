@@ -257,12 +257,6 @@ exports.wizardRecommend = async (req, res) => {
 exports.forYouRecommend = async (req, res) => {
   try {
     const {
-      roomType: userRoomType,
-      priceMin: userPriceMin,
-      priceMax: userPriceMax,
-      areaMin: userAreaMin,
-      capacity: userCapacity,
-      amenities: userAmenities = [],
       lat, lng, radius = 5,
       limit = 12,
     } = req.body
@@ -271,25 +265,12 @@ exports.forYouRecommend = async (req, res) => {
 
     // ── Bước 1: Lấy interaction history từ DB ────────────────────────────
     const userHistory = await fetchUserHistory(req.user._id)
-
-    // ── Bước 2: Infer implicit criteria từ history ───────────────────────
-    const implicit = inferCriteriaFromHistory(userHistory)
-
-    // ── Bước 3: Merge — user criteria > implicit > defaults ──────────────
-    const roomType = userRoomType || implicit?.roomType || null
-    const priceMin = userPriceMin ?? implicit?.priceMin ?? 0
-    const priceMax = userPriceMax ?? implicit?.priceMax ?? 20_000_000
-    const areaMin = userAreaMin || 0
-    const capacity = userCapacity || 1
-    const amenities = [...new Set([...userAmenities, ...(implicit?.amenities || [])])]
-
-    // ── Bước 4: Lấy candidates từ MongoDB ──────────────────────────────────
+    // ── Bước 2: Lấy candidates từ MongoDB ──────────────────────────────────
     const hasGps = !!(lat && lng)
     let rawCandidates
 
     if (hasGps) {
       // Có GPS: chỉ lọc theo vị trí — $near trả kết quả sắp xếp GẦN → XA
-      // Không thêm bất kỳ tiêu chí nào khác, FastAPI tự phân tích trên pool này
       const gpsFilter = {
         status: 'approved',
         isAvailable: true,
@@ -301,11 +282,8 @@ exports.forYouRecommend = async (req, res) => {
         },
       }
       rawCandidates = await Room.find(gpsFilter).limit(300).populate('landlord', 'name avatar')
-
-      // Không giới hạn bán kính — $near không có $maxDistance sắp xếp toàn bộ DB gần → xa
-      // Lấy 300 phòng gần nhất với user, FastAPI tự phân tích trên pool này
     } else {
-      // Không GPS: lấy toàn bộ phòng, FastAPI dùng behavior + content để xếp hạng
+      // Không GPS: lấy toàn bộ phòng
       rawCandidates = await Room.find({ status: 'approved', isAvailable: true })
         .limit(300)
         .populate('landlord', 'name avatar')
@@ -315,7 +293,7 @@ exports.forYouRecommend = async (req, res) => {
       return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
     }
 
-    // ── Bước 5: Tính behavior score & loại trừ phòng đã tương tác ─────────────────
+    // ── Bước 3: Tính behavior score & loại trừ phòng đã tương tác ─────────────────
     const historyRoomIds = new Set(userHistory.map(h => h.roomId))
     const filteredCandidates = rawCandidates.filter(r => !historyRoomIds.has(String(r._id)))
 
@@ -323,14 +301,12 @@ exports.forYouRecommend = async (req, res) => {
       return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
     }
 
-    const favMap = await buildBehaviorMap(filteredCandidates.map(r => r._id))
-    const plainCandidates = attachBehavior(filteredCandidates.map(serializeRoom), favMap)
+    const favMap = await buildBehaviorMap(filteredCandidates.map(r => r._id)) //lấy số lượt yêu thích của phòng
+    const plainCandidates = attachBehavior(filteredCandidates.map(serializeRoom), favMap) //thêm số lượt yêu thích vào danh sách phòng _behavior ∈ [0,1]: 40% viewCount + 60% favorites */
 
-    // ── Bước 6: Gửi FastAPI /for-you với userHistory ─────────────────────
-    const criteria = { roomType, priceMin, priceMax, areaMin, capacity, amenities, radius }
-
+    // ── Bước 4: Tính điểm cá nhân hóa và xếp hạng ─────────────────────
     const rooms = rankForYou({
-      criteria,
+      radius,
       candidates: plainCandidates,
       userHistory,
       center: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
@@ -340,7 +316,6 @@ exports.forYouRecommend = async (req, res) => {
     return sendResponse(res, 200, true, `Gợi ý cá nhân ${rooms.length} phòng`, {
       rooms,
       total: rooms.length,
-      usedCriteria: { roomType, priceMin, priceMax, amenities, hasImplicit: !!implicit },
     })
   } catch (err) {
     return sendResponse(res, 500, false, err.message)
@@ -351,7 +326,8 @@ exports.forYouRecommend = async (req, res) => {
 async function buildInteractionMap(roomIds) {
   const interactions = await Interaction.aggregate([
     { $match: { room: { $in: roomIds }, type: { $in: ['chat', 'booking'] } } },
-    { $group: {
+    {
+      $group: {
         _id: { room: '$room', type: '$type' },
         count: { $sum: '$count' }
       }
@@ -453,19 +429,19 @@ exports.getCommunityRecommend = async (req, res) => {
         if (coords && coords.length >= 2) {
           const rLng = coords[0]
           const rLat = coords[1]
-          
+
           // Haversine distance
           const R = 6371
           const dLat = (rLat - center.lat) * Math.PI / 180
           const dLng = (rLng - center.lng) * Math.PI / 180
           const a = Math.sin(dLat / 2) ** 2 + Math.cos(center.lat * Math.PI / 180) * Math.cos(rLat * Math.PI / 180) * Math.sin(dLng / 2) ** 2
           const dist = 2 * R * Math.asin(Math.sqrt(a))
-          
+
           const innerRadius = radiusKm * 0.4
           if (dist <= innerRadius) locScore = 1
           else locScore = Math.min(Math.max(1 - (dist - innerRadius) / (radiusKm - innerRadius + 1e-9), 0), 1)
         }
-        
+
         const behScore = room._behavior || 0
         const finalScore = 0.6 * locScore + 0.4 * behScore
         return {
@@ -473,8 +449,8 @@ exports.getCommunityRecommend = async (req, res) => {
           _score: Math.round(finalScore * 10000) / 10000
         }
       })
-      .sort((a, b) => b._score - a._score)
-      .slice(0, effectiveLimit)
+        .sort((a, b) => b._score - a._score)
+        .slice(0, effectiveLimit)
     } else {
       // Không có GPS, sắp xếp thuần theo behavior score
       rooms = plainCandidates

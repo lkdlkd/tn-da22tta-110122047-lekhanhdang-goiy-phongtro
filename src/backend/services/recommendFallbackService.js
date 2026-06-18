@@ -234,16 +234,20 @@ function rankWizard({ criteria, candidates, center, limit }) {
   })
 }
 
-function rankForYou({ criteria, candidates, userHistory = [], center, limit }) {
+function rankForYou({ radius, candidates, userHistory = [], center, limit }) {
   const stats = computeStats(candidates)
   const hasGps = !!center
   const hasHistory = userHistory.length > 0
   
-  // Loại bỏ hoàn toàn bộ lọc (content = 0), phân bổ lại trọng số cho vị trí, chất lượng và sở thích cá nhân
+  // Trọng số phân bổ kết hợp theo cấu hình yêu cầu:
+  // 1. Có lịch sử + Có GPS: 40% khoảng cách, 40% cá nhân, 20% cộng đồng
+  // 2. Có lịch sử + Không GPS: 70% cá nhân, 30% cộng đồng
+  // 3. Không lịch sử + Có GPS: 70% khoảng cách, 30% cộng đồng
+  // 4. Không lịch sử + Không GPS: 100% cộng đồng
   const weights = hasHistory
     ? (hasGps
-      ? { content: 0, location: 0.55, quality: 0.10, personal: 0.35 }
-      : { content: 0, location: 0, quality: 0.25, personal: 0.75 })
+      ? { content: 0, location: 0.40, quality: 0.20, personal: 0.40 }
+      : { content: 0, location: 0, quality: 0.30, personal: 0.70 })
     : (hasGps
       ? { content: 0, location: 0.70, quality: 0.30, personal: 0 }
       : { content: 0, location: 0, quality: 1.00, personal: 0 })
@@ -252,7 +256,7 @@ function rankForYou({ criteria, candidates, userHistory = [], center, limit }) {
     candidates,
     targetVec: Array(VECTOR_DIM).fill(0), // Không so khớp vector tiêu chí
     center,
-    radiusKm: criteria ? number(criteria.radius, 5) : 5,
+    radiusKm: number(radius, 5),
     weights,
     stats,
     limit,
