@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { LocationPickerDialog } from '@/components/common/LocationPickerDialog'
 import { RoomCard, RoomCardSkeleton, formatRoomAddress } from '@/components/rooms/RoomCard'
+import { RoomFinderWizard } from '@/components/rooms/RoomFinderWizard'
 import { searchRoomsApi } from '@/services/roomService'
 import { getCommunityRecommendApi, forYouApi } from '@/services/recommendService'
 import { useSelector } from 'react-redux'
@@ -321,6 +322,7 @@ export default function SearchPage() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
   const [userLocation, setUserLocation] = useState(null)
   const [highlightedId, setHighlightedId] = useState(null)
@@ -553,6 +555,9 @@ export default function SearchPage() {
             <select value={filters.sort} onChange={(event) => handleChange('sort', event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none">
               {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg text-primary" onClick={() => setWizardOpen(true)} title="Gợi ý tìm phòng">
+              <Sparkles className="h-4 w-4" />
+            </Button>
             <div className="grid grid-cols-2 rounded-lg border bg-card p-1">
               <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-md" onClick={() => setViewMode('grid')}><LayoutGrid className="h-4 w-4" /></Button>
               <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-md" onClick={() => setViewMode('list')}><LayoutList className="h-4 w-4" /></Button>
@@ -601,6 +606,7 @@ export default function SearchPage() {
               <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                 {viewMode === 'grid' ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
               </Button>
+              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs" onClick={() => setWizardOpen(true)}><Sparkles className="h-3.5 w-3.5" />Gợi ý</Button>
               <Button variant={showMap ? 'default' : 'outline'} size="sm" className="h-9 rounded-lg text-xs" onClick={() => setShowMap((value) => !value)}><MapIcon className="h-3.5 w-3.5" />Bản đồ</Button>
             </div>
 
@@ -727,6 +733,7 @@ export default function SearchPage() {
           Xem {pagination.total > 0 ? `${pagination.total} phòng` : 'kết quả'}
         </Button>
       </Sheet>
+      <RoomFinderWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
       <LocationPickerDialog open={locationPickerOpen} onClose={() => setLocationPickerOpen(false)} onSelect={(coords) => setUserLocation(coords)} />
     </div>
   )
