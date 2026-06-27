@@ -369,8 +369,16 @@ export default function SearchPage() {
     amenities: parseAmenities(searchParams.get('amenities')),
     isAvailable: searchParams.get('isAvailable') || '',
     radius: searchParams.get('radius') || '',
-    sort: searchParams.get('sort') || 'newest',
+    sort: searchParams.get('sort') || (searchParams.get('q') ? 'relevance' : 'newest'),
   }), [searchParams])
+
+  const sortOptions = useMemo(() => {
+    const options = [...SORT_OPTIONS]
+    if (filters.q) {
+      options.unshift({ value: 'relevance', label: 'Mức độ liên quan' })
+    }
+    return options
+  }, [filters.q])
 
   const page = Number(searchParams.get('page') || 1)
 
@@ -553,7 +561,7 @@ export default function SearchPage() {
 
           <div className="hidden items-center gap-2 md:flex">
             <select value={filters.sort} onChange={(event) => handleChange('sort', event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none">
-              {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg text-primary" onClick={() => setWizardOpen(true)} title="Gợi ý tìm phòng">
               <Sparkles className="h-4 w-4" />
@@ -601,7 +609,7 @@ export default function SearchPage() {
           <main className="min-w-0 flex-1">
             <div className="mb-4 flex items-center gap-2 md:hidden">
               <select value={filters.sort} onChange={(event) => handleChange('sort', event.target.value)} className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-xs outline-none">
-                {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                 {viewMode === 'grid' ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}

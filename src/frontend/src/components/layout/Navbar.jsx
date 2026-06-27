@@ -14,11 +14,14 @@ import {
   ChevronDown,
   Compass,
   Heart,
+  Home,
+  Info,
   LayoutDashboard,
   LogOut,
   Menu,
   MessageCircle,
   Moon,
+  Phone,
   Search,
   Shield,
   Sun,
@@ -31,9 +34,11 @@ import { MessageDropdown } from '@/components/chat/MessageDropdown'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { to: '/', label: 'Trang chủ', exact: true, icon: null },
+  { to: '/', label: 'Trang chủ', exact: true, icon: Home },
   { to: '/search', label: 'Tìm phòng', icon: Search },
   { to: '/recommend', label: 'Gợi ý', icon: Compass },
+  { to: '/about', label: 'Giới thiệu', icon: Info },
+  { to: '/contact', label: 'Liên hệ', icon: Phone },
 ]
 const LANDLORD_MENU = [
   { to: '/landlord/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
@@ -326,7 +331,7 @@ export function Navbar() {
               key={to}
               to={to}
               className={cn(
-                'flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors',
+                'flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors whitespace-nowrap',
                 isActive(to, exact)
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
@@ -354,10 +359,10 @@ export function Navbar() {
         <div className="flex-1" />
 
         {isAuth && user?.role === 'landlord' && (
-          <Button size="sm" asChild className="hidden h-9 rounded-lg lg:inline-flex">
-            <Link to="/landlord/rooms/create">
+          <Button size="sm" asChild className="hidden h-9 rounded-lg lg:inline-flex shrink-0">
+            <Link to="/landlord/rooms/create" className="gap-1.5">
               <Building2 className="h-4 w-4" />
-              Đăng phòng
+              <span className="hidden xl:inline">Đăng phòng</span>
             </Link>
           </Button>
         )}

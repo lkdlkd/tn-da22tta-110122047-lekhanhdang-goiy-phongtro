@@ -176,6 +176,7 @@ exports.getRooms = async (req, res) => {
     const skip = (page - 1) * limit
 
     const query = {}
+    let projection = {}
 
     // ── Status: mặc định approved cho public ─────────────────────────
     query.status = req.query.status || 'approved'
@@ -183,6 +184,7 @@ exports.getRooms = async (req, res) => {
     // ── Full-text search ──────────────────────────────────────────────
     if (req.query.q && req.query.q.trim()) {
       query.$text = { $search: req.query.q.trim() }
+      projection = { score: { $meta: "textScore" } }
     }
 
     // ── Lọc giá ──────────────────────────────────────────────────────
@@ -243,10 +245,18 @@ exports.getRooms = async (req, res) => {
       newest:     { createdAt: -1 },
       views:      { viewCount: -1 },
     }
-    const sortBy = sortMap[req.query.sort] || { createdAt: -1 }
+    
+    let sortBy = { createdAt: -1 }
+    if (req.query.sort === 'relevance' && query.$text) {
+      sortBy = { score: { $meta: "textScore" } }
+    } else if (req.query.sort && sortMap[req.query.sort]) {
+      sortBy = sortMap[req.query.sort]
+    } else if (query.$text) {
+      sortBy = { score: { $meta: "textScore" } }
+    }
 
     const [rooms, total] = await Promise.all([
-      Room.find(query)
+      Room.find(query, projection)
         .populate('landlord', 'name username email phone avatar responseRate avgResponseTime')
         .sort(sortBy)
         .skip(skip)
