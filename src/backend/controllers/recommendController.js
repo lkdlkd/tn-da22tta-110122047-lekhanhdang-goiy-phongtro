@@ -293,25 +293,42 @@ exports.forYouRecommend = async (req, res) => {
       return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
     }
 
-    // ── Bước 3: Tính behavior score & loại trừ phòng đã tương tác ─────────────────
+    // ── Bước 3: Phân loại ứng viên và xếp hạng ─────────────────
     const historyRoomIds = new Set(userHistory.map(h => h.roomId))
-    const filteredCandidates = rawCandidates.filter(r => !historyRoomIds.has(String(r._id)))
+    const nonInteractedCandidates = rawCandidates.filter(r => !historyRoomIds.has(String(r._id)))
+    const interactedCandidates = rawCandidates.filter(r => historyRoomIds.has(String(r._id)))
 
-    if (!filteredCandidates.length) {
-      return sendResponse(res, 200, true, 'Không tìm thấy phòng phù hợp', { rooms: [], total: 0 })
+    let rooms = []
+
+    // 1. Xếp hạng nhóm chưa tương tác trước
+    if (nonInteractedCandidates.length > 0) {
+      const favMap = await buildBehaviorMap(nonInteractedCandidates.map(r => r._id))
+      const plainNonInteracted = attachBehavior(nonInteractedCandidates.map(serializeRoom), favMap)
+
+      rooms = rankForYou({
+        radius,
+        candidates: plainNonInteracted,
+        userHistory,
+        center: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
+        limit: effectiveLimit,
+      })
     }
 
-    const favMap = await buildBehaviorMap(filteredCandidates.map(r => r._id)) //lấy số lượt yêu thích của phòng
-    const plainCandidates = attachBehavior(filteredCandidates.map(serializeRoom), favMap) //thêm số lượt yêu thích vào danh sách phòng _behavior ∈ [0,1]: 40% viewCount + 60% favorites */
+    // 2. Nếu chưa đủ limit, bổ sung nhóm đã tương tác để tránh danh sách trống/ít phòng
+    if (rooms.length < effectiveLimit && interactedCandidates.length > 0) {
+      const need = effectiveLimit - rooms.length
+      const favMap = await buildBehaviorMap(interactedCandidates.map(r => r._id))
+      const plainInteracted = attachBehavior(interactedCandidates.map(serializeRoom), favMap)
 
-    // ── Bước 4: Tính điểm cá nhân hóa và xếp hạng ─────────────────────
-    const rooms = rankForYou({
-      radius,
-      candidates: plainCandidates,
-      userHistory,
-      center: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
-      limit: effectiveLimit,
-    })
+      const rankedInteracted = rankForYou({
+        radius,
+        candidates: plainInteracted,
+        userHistory,
+        center: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
+        limit: need,
+      })
+      rooms = [...rooms, ...rankedInteracted]
+    }
 
     return sendResponse(res, 200, true, `Gợi ý cá nhân ${rooms.length} phòng`, {
       rooms,

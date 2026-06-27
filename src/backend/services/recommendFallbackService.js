@@ -238,7 +238,7 @@ function rankForYou({ radius, candidates, userHistory = [], center, limit }) {
   const stats = computeStats(candidates)
   const hasGps = !!center
   const hasHistory = userHistory.length > 0
-  
+
   // Trọng số phân bổ kết hợp theo cấu hình yêu cầu:
   // 1. Có lịch sử + Có GPS: 40% khoảng cách, 40% cá nhân, 20% cộng đồng
   // 2. Có lịch sử + Không GPS: 70% cá nhân, 30% cộng đồng
