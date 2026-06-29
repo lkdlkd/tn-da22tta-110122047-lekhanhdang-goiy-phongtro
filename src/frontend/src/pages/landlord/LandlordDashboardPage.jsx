@@ -126,7 +126,12 @@ export default function LandlordDashboardPage() {
       pendingRooms: rooms.filter((room) => room.status === 'pending').length,
       issueRooms: rooms.filter((room) => room.status === 'flagged' || room.status === 'rejected').length,
       totalViews: rooms.reduce((sum, room) => sum + (room.viewCount || 0), 0),
-      pendingAppts: appointments.filter((appt) => appt.status === 'pending').length,
+      pendingAppts: appointments.filter((appt) => {
+        if (appt.status !== 'pending') return false
+        const createdByUserId = appt.createdBy?._id || appt.createdBy
+        const isLandlordCreator = createdByUserId && String(createdByUserId) === String(appt.landlord?._id || appt.landlord)
+        return !isLandlordCreator
+      }).length,
       todayAppts: appointments.filter((appt) =>
         ['pending', 'confirmed'].includes(appt.status) &&
         dayjs(appt.date).format('YYYY-MM-DD') === today
@@ -140,8 +145,8 @@ export default function LandlordDashboardPage() {
       .filter((appt) => {
         if (appt.status !== 'pending') return false
         const createdByUserId = appt.createdBy?._id || appt.createdBy
-        const isStudentCreator = !createdByUserId || String(createdByUserId) === String(appt.student?._id || appt.student)
-        return isStudentCreator
+        const isLandlordCreator = createdByUserId && String(createdByUserId) === String(appt.landlord?._id || appt.landlord)
+        return !isLandlordCreator
       })
       .slice(0, 5)
   }, [appointments])

@@ -76,8 +76,9 @@ function AppointmentCard({ appointment, isLandlord, onConfirm, onComplete, onCan
   const counterpart = isLandlord ? appointment.student : appointment.landlord
 
   const createdByUserId = appointment.createdBy?._id || appointment.createdBy
+  const isLandlordCreator = createdByUserId && String(createdByUserId) === String(appointment.landlord?._id || appointment.landlord)
   const isStudentCreator = !createdByUserId || String(createdByUserId) === String(appointment.student?._id || appointment.student)
-  const showConfirmButton = appointment.status === 'pending' && (isLandlord ? isStudentCreator : !isStudentCreator)
+  const showConfirmButton = appointment.status === 'pending' && (isLandlord ? !isLandlordCreator : !isStudentCreator)
 
   return (
     <Card className="overflow-hidden transition-colors hover:border-primary/45">
